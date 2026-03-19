@@ -722,11 +722,15 @@ function KreinGui:CreateWindow(cfg)
         local TabScroll = Instance.new("ScrollingFrame", TabPanel)
         TabScroll.Size = UDim2.new(1,0,1,0); TabScroll.BackgroundTransparency = 1; TabScroll.BorderSizePixel = 0
         TabScroll.ScrollBarThickness = 2; TabScroll.ScrollBarImageColor3 = Theme.Accent
-        TabScroll.CanvasSize = UDim2.new(0,0,0,0); TabScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        TabScroll.CanvasSize = UDim2.new(0,0,0,0)
+        TabScroll.AutomaticCanvasSize = Enum.AutomaticSize.None
         Pad(TabScroll, 8,8,6,6)
         local TabLayout = Instance.new("UIListLayout", TabScroll)
         TabLayout.SortOrder = Enum.SortOrder.LayoutOrder; TabLayout.Padding = UDim.new(0,3)
         TabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        TabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            TabScroll.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y + 16)
+        end)
 
         local ContentPanel = Instance.new("Frame", Body)
         ContentPanel.Size = UDim2.new(1,-(TAB_W+1),1,0); ContentPanel.Position = UDim2.new(0,TAB_W+1,0,0)
@@ -831,11 +835,16 @@ function KreinGui:CreateWindow(cfg)
             Content.BackgroundTransparency=1; Content.BorderSizePixel=0
             Content.Visible=false; Content.ScrollBarThickness=3
             Content.ScrollBarImageColor3=Theme.Accent
-            Content.CanvasSize=UDim2.new(0,0,0,0); Content.AutomaticCanvasSize=Enum.AutomaticSize.Y
-            Content.ClipsDescendants=true  -- HARUS true agar AutomaticCanvasSize bekerja
+            Content.CanvasSize=UDim2.new(0,0,0,0)
+            Content.AutomaticCanvasSize=Enum.AutomaticSize.None
+            Content.ClipsDescendants=true
             Pad(Content,10,10,10,10)
             local EList=Instance.new("UIListLayout",Content)
             EList.SortOrder=Enum.SortOrder.LayoutOrder; EList.Padding=UDim.new(0,6)
+            -- Update canvas size manual setiap kali layout berubah
+            EList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                Content.CanvasSize = UDim2.new(0, 0, 0, EList.AbsoluteContentSize.Y + 20)
+            end)
 
             tabFrms[idx] = Content
             if idx == 1 then setActive(1) end
