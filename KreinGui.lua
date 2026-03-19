@@ -731,7 +731,7 @@ function KreinGui:CreateWindow(cfg)
         local ContentPanel = Instance.new("Frame", Body)
         ContentPanel.Size = UDim2.new(1,-(TAB_W+1),1,0); ContentPanel.Position = UDim2.new(0,TAB_W+1,0,0)
         ContentPanel.BackgroundTransparency = 1; ContentPanel.BorderSizePixel = 0
-        ContentPanel.ClipsDescendants = false
+        ContentPanel.ClipsDescendants = true  -- clip content panel agar tidak overflow window
 
         -- ── WINDOW OBJECT ────────────────────────────────────
         local WObj    = {}
@@ -832,7 +832,7 @@ function KreinGui:CreateWindow(cfg)
             Content.Visible=false; Content.ScrollBarThickness=3
             Content.ScrollBarImageColor3=Theme.Accent
             Content.CanvasSize=UDim2.new(0,0,0,0); Content.AutomaticCanvasSize=Enum.AutomaticSize.Y
-            Content.ClipsDescendants=false
+            Content.ClipsDescendants=true  -- HARUS true agar AutomaticCanvasSize bekerja
             Pad(Content,10,10,10,10)
             local EList=Instance.new("UIListLayout",Content)
             EList.SortOrder=Enum.SortOrder.LayoutOrder; EList.Padding=UDim.new(0,6)
