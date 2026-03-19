@@ -88,39 +88,42 @@ end
 -- ============================================================
 -- THEME
 -- ============================================================
+-- NEON DARK THEME
 local T = {
-    WindowBG    = Color3.fromRGB(28,28,32),
-    HeaderBG    = Color3.fromRGB(22,22,26),
-    TabBG       = Color3.fromRGB(22,22,26),
-    ElementBG   = Color3.fromRGB(40,40,48),
-    ElementHov  = Color3.fromRGB(50,50,60),
-    ElementStr  = Color3.fromRGB(60,60,72),
-    TabDef      = Color3.fromRGB(30,30,36),
-    TabHov      = Color3.fromRGB(42,42,50),
-    TabOn       = Color3.fromRGB(99,102,241),
-    TabOnText   = Color3.fromRGB(255,255,255),
-    TabOffText  = Color3.fromRGB(160,160,175),
-    Accent      = Color3.fromRGB(99,102,241),
-    AccentHov   = Color3.fromRGB(129,132,255),
-    AccentDark  = Color3.fromRGB(60,62,160),
-    ToggleOff   = Color3.fromRGB(55,55,68),
-    ToggleOn    = Color3.fromRGB(99,102,241),
-    TextPri     = Color3.fromRGB(240,240,248),
-    TextSec     = Color3.fromRGB(140,140,160),
-    TextMut     = Color3.fromRGB(90,90,110),
-    SecText     = Color3.fromRGB(120,120,145),
-    CloseRed    = Color3.fromRGB(255,75,75),
-    MinGray     = Color3.fromRGB(160,160,175),
-    Sep         = Color3.fromRGB(45,45,55),
-    WinStr      = Color3.fromRGB(70,70,90),
+    WindowBG    = Color3.fromRGB(8, 8, 14),
+    HeaderBG    = Color3.fromRGB(10, 10, 18),
+    TabBG       = Color3.fromRGB(10, 10, 18),
+    ElementBG   = Color3.fromRGB(16, 16, 26),
+    ElementHov  = Color3.fromRGB(22, 22, 34),
+    ElementStr  = Color3.fromRGB(0, 255, 180),   -- neon green border
+    TabDef      = Color3.fromRGB(12, 12, 20),
+    TabHov      = Color3.fromRGB(0, 255, 180),
+    TabOn       = Color3.fromRGB(0, 255, 180),
+    TabOnText   = Color3.fromRGB(8, 8, 14),
+    TabOffText  = Color3.fromRGB(0, 180, 130),
+    Accent      = Color3.fromRGB(0, 255, 180),
+    AccentHov   = Color3.fromRGB(80, 255, 210),
+    AccentDark  = Color3.fromRGB(0, 160, 110),
+    ToggleOff   = Color3.fromRGB(20, 20, 32),
+    ToggleOn    = Color3.fromRGB(0, 255, 180),
+    TextPri     = Color3.fromRGB(0, 255, 180),
+    TextSec     = Color3.fromRGB(0, 200, 145),
+    TextMut     = Color3.fromRGB(0, 120, 90),
+    SecText     = Color3.fromRGB(0, 150, 110),
+    CloseRed    = Color3.fromRGB(255, 80, 80),
+    MinGray     = Color3.fromRGB(0, 180, 130),
+    Sep         = Color3.fromRGB(0, 255, 180),
+    WinStr      = Color3.fromRGB(0, 255, 180),
 }
 
 local Presets = {
-    Default  = {Accent=Color3.fromRGB(99,102,241), ToggleOn=Color3.fromRGB(99,102,241), TabOn=Color3.fromRGB(99,102,241), WindowBG=Color3.fromRGB(28,28,32), HeaderBG=Color3.fromRGB(22,22,26)},
-    Rose     = {Accent=Color3.fromRGB(244,63,94),  ToggleOn=Color3.fromRGB(244,63,94),  TabOn=Color3.fromRGB(244,63,94),  WindowBG=Color3.fromRGB(30,20,24), HeaderBG=Color3.fromRGB(22,14,18)},
-    Emerald  = {Accent=Color3.fromRGB(16,185,129), ToggleOn=Color3.fromRGB(16,185,129), TabOn=Color3.fromRGB(16,185,129), WindowBG=Color3.fromRGB(18,28,24), HeaderBG=Color3.fromRGB(12,20,18)},
-    Amber    = {Accent=Color3.fromRGB(245,158,11), ToggleOn=Color3.fromRGB(245,158,11), TabOn=Color3.fromRGB(245,158,11), WindowBG=Color3.fromRGB(28,24,16), HeaderBG=Color3.fromRGB(22,18,10)},
-    Midnight = {Accent=Color3.fromRGB(139,92,246), ToggleOn=Color3.fromRGB(139,92,246), TabOn=Color3.fromRGB(139,92,246), WindowBG=Color3.fromRGB(15,15,25), HeaderBG=Color3.fromRGB(10,10,18)},
+    Neon     = {Accent=Color3.fromRGB(0,255,180),   ToggleOn=Color3.fromRGB(0,255,180),   TabOn=Color3.fromRGB(0,255,180),   WindowBG=Color3.fromRGB(8,8,14),    HeaderBG=Color3.fromRGB(10,10,18)},
+    Default  = {Accent=Color3.fromRGB(99,102,241),  ToggleOn=Color3.fromRGB(99,102,241),  TabOn=Color3.fromRGB(99,102,241),  WindowBG=Color3.fromRGB(28,28,32),  HeaderBG=Color3.fromRGB(22,22,26)},
+    Rose     = {Accent=Color3.fromRGB(244,63,94),   ToggleOn=Color3.fromRGB(244,63,94),   TabOn=Color3.fromRGB(244,63,94),   WindowBG=Color3.fromRGB(30,20,24),  HeaderBG=Color3.fromRGB(22,14,18)},
+    Emerald  = {Accent=Color3.fromRGB(16,185,129),  ToggleOn=Color3.fromRGB(16,185,129),  TabOn=Color3.fromRGB(16,185,129),  WindowBG=Color3.fromRGB(18,28,24),  HeaderBG=Color3.fromRGB(12,20,18)},
+    Amber    = {Accent=Color3.fromRGB(245,158,11),  ToggleOn=Color3.fromRGB(245,158,11),  TabOn=Color3.fromRGB(245,158,11),  WindowBG=Color3.fromRGB(28,24,16),  HeaderBG=Color3.fromRGB(22,18,10)},
+    Midnight = {Accent=Color3.fromRGB(139,92,246),  ToggleOn=Color3.fromRGB(139,92,246),  TabOn=Color3.fromRGB(139,92,246),  WindowBG=Color3.fromRGB(15,15,25),  HeaderBG=Color3.fromRGB(10,10,18)},
+    Cyan     = {Accent=Color3.fromRGB(0,220,255),   ToggleOn=Color3.fromRGB(0,220,255),   TabOn=Color3.fromRGB(0,220,255),   WindowBG=Color3.fromRGB(6,12,18),   HeaderBG=Color3.fromRGB(8,14,22)},
 }
 
 -- ============================================================
@@ -209,6 +212,172 @@ local function StartSnake(abar, accent)
 end
 
 -- ============================================================
+-- LOADING SCREEN ANIMATION
+-- ============================================================
+local function ShowLoading(SG, accent, title, onDone)
+    -- Overlay gelap penuh
+    local Overlay = Instance.new("Frame", SG)
+    Overlay.Size = UDim2.new(1,0,1,0)
+    Overlay.BackgroundColor3 = Color3.fromRGB(0,0,0)
+    Overlay.BackgroundTransparency = 0
+    Overlay.BorderSizePixel = 0
+    Overlay.ZIndex = 100
+
+    -- Container tengah
+    local Box = Instance.new("Frame", Overlay)
+    Box.Size = UDim2.new(0,300,0,160)
+    Box.Position = UDim2.new(0.5,-150,0.5,-80)
+    Box.BackgroundColor3 = Color3.fromRGB(8,8,14)
+    Box.BorderSizePixel = 0
+    Box.ZIndex = 101
+    Instance.new("UICorner",Box).CornerRadius = UDim.new(0,16)
+    local bs = Instance.new("UIStroke",Box)
+    bs.Color = accent; bs.Thickness = 1.5
+
+    -- Glow effect di border
+    local BGlow = Instance.new("UIStroke",Box)
+    BGlow.Color = accent; BGlow.Thickness = 4
+    BGlow.Transparency = 0.7
+
+    -- Logo / Title teks
+    local TitleLbl = Instance.new("TextLabel", Box)
+    TitleLbl.Size = UDim2.new(1,0,0,36)
+    TitleLbl.Position = UDim2.new(0,0,0,24)
+    TitleLbl.BackgroundTransparency = 1
+    TitleLbl.BorderSizePixel = 0
+    TitleLbl.Text = title
+    TitleLbl.TextSize = 18
+    TitleLbl.Font = Enum.Font.GothamBold
+    TitleLbl.TextColor3 = accent
+    TitleLbl.TextXAlignment = Enum.TextXAlignment.Center
+    TitleLbl.ZIndex = 102
+
+    -- Subtitle
+    local SubLbl = Instance.new("TextLabel", Box)
+    SubLbl.Size = UDim2.new(1,0,0,20)
+    SubLbl.Position = UDim2.new(0,0,0,58)
+    SubLbl.BackgroundTransparency = 1
+    SubLbl.BorderSizePixel = 0
+    SubLbl.Text = "Initializing..."
+    SubLbl.TextSize = 11
+    SubLbl.Font = Enum.Font.Gotham
+    SubLbl.TextColor3 = Color3.new(accent.R*0.6, accent.G*0.6, accent.B*0.6)
+    SubLbl.TextXAlignment = Enum.TextXAlignment.Center
+    SubLbl.ZIndex = 102
+
+    -- Progress bar track
+    local BarTrack = Instance.new("Frame", Box)
+    BarTrack.Size = UDim2.new(0,220,0,4)
+    BarTrack.Position = UDim2.new(0.5,-110,0,100)
+    BarTrack.BackgroundColor3 = Color3.fromRGB(20,20,32)
+    BarTrack.BorderSizePixel = 0
+    BarTrack.ZIndex = 102
+    Instance.new("UICorner",BarTrack).CornerRadius = UDim.new(1,0)
+
+    -- Progress bar fill
+    local BarFill = Instance.new("Frame", BarTrack)
+    BarFill.Size = UDim2.new(0,0,1,0)
+    BarFill.BackgroundColor3 = accent
+    BarFill.BorderSizePixel = 0
+    BarFill.ZIndex = 103
+    Instance.new("UICorner",BarFill).CornerRadius = UDim.new(1,0)
+
+    -- Snake glow pada progress bar
+    local BarSnake = Instance.new("Frame", BarFill)
+    BarSnake.Size = UDim2.new(0.5,0,1,0)
+    BarSnake.BackgroundColor3 = Color3.fromRGB(255,255,255)
+    BarSnake.BackgroundTransparency = 0.5
+    BarSnake.BorderSizePixel = 0
+    BarSnake.ZIndex = 104
+    Instance.new("UICorner",BarSnake).CornerRadius = UDim.new(1,0)
+    local bsg = Instance.new("UIGradient", BarSnake)
+    bsg.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0,1),
+        NumberSequenceKeypoint.new(0.5,0.3),
+        NumberSequenceKeypoint.new(1,1),
+    })
+
+    -- Percent label
+    local PctLbl = Instance.new("TextLabel", Box)
+    PctLbl.Size = UDim2.new(1,0,0,18)
+    PctLbl.Position = UDim2.new(0,0,0,116)
+    PctLbl.BackgroundTransparency = 1
+    PctLbl.BorderSizePixel = 0
+    PctLbl.Text = "0%"
+    PctLbl.TextSize = 10
+    PctLbl.Font = Enum.Font.GothamBold
+    PctLbl.TextColor3 = Color3.new(accent.R*0.7, accent.G*0.7, accent.B*0.7)
+    PctLbl.TextXAlignment = Enum.TextXAlignment.Center
+    PctLbl.ZIndex = 102
+
+    -- Dots animasi (3 titik berkedip)
+    local dots = {}
+    local dotY = 138
+    for i = 1,3 do
+        local d = Instance.new("Frame", Box)
+        d.Size = UDim2.new(0,5,0,5)
+        d.Position = UDim2.new(0.5,(i-2)*14-2,0,dotY)
+        d.BackgroundColor3 = accent
+        d.BackgroundTransparency = 0.3
+        d.BorderSizePixel = 0
+        d.ZIndex = 102
+        Instance.new("UICorner",d).CornerRadius = UDim.new(1,0)
+        dots[i] = d
+    end
+
+    -- Animasi loading
+    local steps = {
+        {pct=0.15,  txt="Loading modules..."},
+        {pct=0.35,  txt="Setting up UI..."},
+        {pct=0.55,  txt="Applying theme..."},
+        {pct=0.75,  txt="Building elements..."},
+        {pct=0.90,  txt="Almost ready..."},
+        {pct=1.0,   txt="Done!"},
+    }
+
+    local TwS = TweenService
+    local function twBar(p)
+        TwS:Create(BarFill, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+            {Size=UDim2.new(p,0,1,0)}):Play()
+    end
+
+    -- Dot pulse loop
+    local dotIdx = 0
+    local dotConn
+    dotConn = RunService.Heartbeat:Connect(function()
+        dotIdx = dotIdx + 1
+        for i,d in ipairs(dots) do
+            local phase = ((dotIdx + i*8) % 30) / 30
+            d.BackgroundTransparency = 0.1 + math.abs(math.sin(phase*math.pi)) * 0.8
+        end
+    end)
+
+    -- Jalankan animasi step by step
+    task.spawn(function()
+        -- Fade in box
+        Box.BackgroundTransparency = 1
+        TwS:Create(Box, TweenInfo.new(0.3, Enum.EasingStyle.Quart), {BackgroundTransparency=0}):Play()
+        task.wait(0.3)
+
+        for _, step in ipairs(steps) do
+            SubLbl.Text = step.txt
+            twBar(step.pct)
+            PctLbl.Text = math.floor(step.pct * 100) .. "%"
+            task.wait(0.22)
+        end
+
+        task.wait(0.15)
+        dotConn:Disconnect()
+
+        -- Fade out
+        TwS:Create(Overlay, TweenInfo.new(0.4, Enum.EasingStyle.Quart), {BackgroundTransparency=1}):Play()
+        task.wait(0.42)
+        Overlay:Destroy()
+        if onDone then onDone() end
+    end)
+end
+
+-- ============================================================
 -- LIBRARY
 -- ============================================================
 local KreinGui = {}
@@ -250,8 +419,12 @@ function KreinGui:CreateWindow(cfg)
     Win.ClipsDescendants=true
     Cor(Win,12); Str(Win,T.WinStr,1)
     local g=Instance.new("UIGradient",Win)
-    g.Color=ColorSequence.new(Color3.fromRGB(40,40,50),Color3.fromRGB(22,22,28))
+    g.Color=ColorSequence.new(Color3.fromRGB(14,14,24),Color3.fromRGB(6,6,12))
     g.Rotation=135
+
+    -- Sembunyikan window sampai loading selesai
+    Win.BackgroundTransparency = 1
+    Win.Visible = false
 
     -- Header
     local H=Instance.new("Frame",Win)
@@ -814,6 +987,16 @@ function KreinGui:CreateWindow(cfg)
 
         return Tab
     end -- CreateTab
+
+    -- Tampilkan loading screen, lalu reveal window dengan animasi
+    ShowLoading(SG, T.Accent, title, function()
+        Win.Visible = true
+        Win.BackgroundTransparency = 1
+        -- Slide in dari bawah + fade in
+        Win.Position = UDim2.new(0.5,-280,0.5,-140)
+        Tw(Win, {BackgroundTransparency=0, Position=UDim2.new(0.5,-280,0.5,-170)}, 0.4,
+            Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+    end)
 
     return W
 end -- CreateWindow
