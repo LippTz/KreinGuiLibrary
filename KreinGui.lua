@@ -1272,19 +1272,87 @@ function KreinGui:CreateWindow(cfg)
             -- Key masih valid, langsung buka GUI
             return buildGUI()
         else
-            -- Tampilkan window key dulu
-            local WObj = nil
-            ShowKeyWindow(cfg, function()
-                WObj = buildGUI()
-            end)
-            -- Return proxy object yang akan forward ke WObj asli setelah key valid
-            -- Untuk simplicity, return dummy yang noop sampai GUI terbuka
-            local proxy = setmetatable({}, {
-                __index = function(_, k)
-                    return function() end
+            --[[
+                MASALAH LAMA: proxy dummy langsung di-return, tapi semua
+                pemanggilan CreateTab / CreateButton / dll dari user
+                tidak pernah sampai ke GUI asli → isi GUI kosong.
+
+                SOLUSI: Proxy Queue Pattern
+                - Semua method yang dipanggil user (CreateTab, Notify, dll)
+                  dicatat dalam antrian (queue).
+                - Setelah key valid dan buildGUI() selesai, semua antrian
+                  diputar ulang ke WObj asli satu per satu.
+                - Tab dan elemen yang dibuat user akan muncul normal.
+            ]]
+
+            local realWObj  = nil       -- WObj asli, diisi setelah key valid
+            local callQueue = {}        -- antrian { methodName, args }
+            local tabQueue  = {}        -- antrian CreateTab { name, calls[] }
+
+            -- Proxy WObj: catat semua pemanggilan ke antrian
+            local WProxy = {}
+
+            -- CreateTab: return TabProxy yang juga mencatat pemanggilan
+            function WProxy:CreateTab(name)
+                local tabEntry = { name = name, calls = {} }
+                table.insert(tabQueue, tabEntry)
+
+                -- TabProxy: catat semua pemanggilan elemen
+                local TProxy = {}
+                local tabMethods = {
+                    "CreateLabel","CreateSectionHeader","CreateButton",
+                    "CreateToggle","CreateSlider","CreateTextBox",
+                    "CreateDropdown","CreateColorPicker","CreateKeybind",
+                    "CreateInputNumber","CreateProgressBar","AddSeparator",
+                }
+                for _, mName in ipairs(tabMethods) do
+                    TProxy[mName] = function(_, cfg2)
+                        table.insert(tabEntry.calls, { method = mName, cfg = cfg2 })
+                        -- Return api dummy agar tidak error saat user simpan return value
+                        -- (misal: local bar = Tab:CreateProgressBar(...); bar:Set(50))
+                        local dummyApi = {}
+                        setmetatable(dummyApi, {
+                            __index = function(_, k)
+                                return function() return dummyApi end
+                            end
+                        })
+                        return dummyApi
+                    end
                 end
-            })
-            return proxy
+                return TProxy
+            end
+
+            -- Notify, SaveConfig, LoadConfig: catat ke antrian umum
+            for _, mName in ipairs({"Notify","SaveConfig","LoadConfig"}) do
+                WProxy[mName] = function(_, ...)
+                    local args = {...}
+                    table.insert(callQueue, { method = mName, args = args })
+                end
+            end
+
+            -- Setelah key valid: buildGUI, replay semua antrian
+            ShowKeyWindow(cfg, function()
+                realWObj = buildGUI()
+
+                -- Replay Tab + elemen
+                for _, tabEntry in ipairs(tabQueue) do
+                    local realTab = realWObj:CreateTab(tabEntry.name)
+                    for _, call in ipairs(tabEntry.calls) do
+                        if realTab[call.method] then
+                            realTab[call.method](realTab, call.cfg)
+                        end
+                    end
+                end
+
+                -- Replay method umum (Notify dll)
+                for _, item in ipairs(callQueue) do
+                    if realWObj[item.method] then
+                        realWObj[item.method](realWObj, table.unpack(item.args))
+                    end
+                end
+            end)
+
+            return WProxy
         end
     else
         return buildGUI()
