@@ -444,7 +444,7 @@ function KreinGui:CreateWindow(cfg)
                 local lbl=btn:FindFirstChild("Lbl"); if lbl then Tween(lbl,{TextColor3=on and Theme.TabActiveText or Theme.TabDefaultText},0.18) end
                 local bar=btn:FindFirstChild("Bar"); if bar then bar.Visible=on end
             end
-            -- Pakai Size bukan Visible agar AutomaticCanvasSize tetap aktif
+            -- Sembunyikan dengan Size=0 (JANGAN Visible=false, tidak works di executor ini)
             for i,f in ipairs(tabFrms) do
                 if i == idx then
                     f.Size = UDim2.new(1, 0, 1, 0)
@@ -531,15 +531,17 @@ function KreinGui:CreateWindow(cfg)
             tabBtns[idx] = Btn
 
             local Content = Instance.new("ScrollingFrame", ContentPanel)
-            Content.Name="Content_"..idx; Content.Size=UDim2.new(1,0,1,0)
+            Content.Name="Content_"..idx
             Content.BackgroundTransparency=1; Content.BorderSizePixel=0
-            Content.Visible=true; Content.ScrollBarThickness=3
+            Content.ScrollBarThickness=3
             Content.ScrollBarImageColor3=Theme.Accent
             Content.CanvasSize=UDim2.new(0,0,0,0)
             Content.AutomaticCanvasSize=Enum.AutomaticSize.Y
             Content.ClipsDescendants=true
-            -- Sembunyikan dengan Size=0 (bukan Visible) agar AutomaticCanvasSize tetap jalan
+            -- SELALU visible=true, sembunyikan dengan Size=0
+            Content.Visible=true
             Content.Size=UDim2.new(0,0,0,0)
+            Content.Position=UDim2.new(0,0,0,0)
             Pad(Content,10,10,10,10)
             local EList=Instance.new("UIListLayout",Content)
             EList.SortOrder=Enum.SortOrder.LayoutOrder; EList.Padding=UDim.new(0,6)
@@ -981,13 +983,18 @@ function KreinGui:CreateWindow(cfg)
                 s.Size=UDim2.new(1,0,0,1); s.BackgroundColor3=Theme.Separator; s.BorderSizePixel=0; s.LayoutOrder=nxt()
             end
 
-            -- Tab pertama aktif secara default
-            if idx == 1 then
-                setActive(1)
-            end
-
             return TObj
         end -- CreateTab
+
+        -- Aktifkan tab pertama setelah semua kode user selesai
+        -- task.defer dua kali = tunggu 2 frame, cukup untuk semua elemen selesai dibuat
+        task.defer(function()
+            task.defer(function()
+                if #tabFrms > 0 then
+                    setActive(1)
+                end
+            end)
+        end)
 
         return WObj
     end -- buildGUI
