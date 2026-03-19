@@ -437,7 +437,6 @@ function KreinGui:CreateWindow(cfg)
         local flagMap = {}
 
         local function setActive(idx)
-            if active == idx then return end
             active = idx
             for i, btn in ipairs(tabBtns) do
                 local on = (i==idx)
@@ -445,16 +444,14 @@ function KreinGui:CreateWindow(cfg)
                 local lbl=btn:FindFirstChild("Lbl"); if lbl then Tween(lbl,{TextColor3=on and Theme.TabActiveText or Theme.TabDefaultText},0.18) end
                 local bar=btn:FindFirstChild("Bar"); if bar then bar.Visible=on end
             end
+            -- Pakai Size bukan Visible agar AutomaticCanvasSize tetap aktif
             for i,f in ipairs(tabFrms) do
-                f.Visible=(i==idx)
-                -- Paksa recalculate canvas setelah frame visible
-                if i==idx then
-                    task.defer(function()
-                        local el = f:FindFirstChildOfClass("UIListLayout")
-                        if el then
-                            f.CanvasSize = UDim2.new(0,0,0, el.AbsoluteContentSize.Y + 20)
-                        end
-                    end)
+                if i == idx then
+                    f.Size = UDim2.new(1, 0, 1, 0)
+                    f.Position = UDim2.new(0, 0, 0, 0)
+                else
+                    f.Size = UDim2.new(0, 0, 0, 0)
+                    f.Position = UDim2.new(0, 0, 0, 0)
                 end
             end
         end
@@ -536,30 +533,21 @@ function KreinGui:CreateWindow(cfg)
             local Content = Instance.new("ScrollingFrame", ContentPanel)
             Content.Name="Content_"..idx; Content.Size=UDim2.new(1,0,1,0)
             Content.BackgroundTransparency=1; Content.BorderSizePixel=0
-            Content.Visible=false; Content.ScrollBarThickness=3
+            Content.Visible=true; Content.ScrollBarThickness=3
             Content.ScrollBarImageColor3=Theme.Accent
-            -- AutomaticCanvasSize=Y bekerja HANYA jika ClipsDescendants=true
-            -- dan frame sudah visible. Kita set keduanya dengan benar:
             Content.CanvasSize=UDim2.new(0,0,0,0)
             Content.AutomaticCanvasSize=Enum.AutomaticSize.Y
             Content.ClipsDescendants=true
+            -- Sembunyikan dengan Size=0 (bukan Visible) agar AutomaticCanvasSize tetap jalan
+            Content.Size=UDim2.new(0,0,0,0)
             Pad(Content,10,10,10,10)
             local EList=Instance.new("UIListLayout",Content)
             EList.SortOrder=Enum.SortOrder.LayoutOrder; EList.Padding=UDim.new(0,6)
-            -- Paksa update canvas saat frame pertama kali visible
-            Content:GetPropertyChangedSignal("Visible"):Connect(function()
-                if Content.Visible then
-                    -- Tunggu 1 frame agar Roblox selesai render layout
-                    task.defer(function()
-                        Content.CanvasSize = UDim2.new(0,0,0,0)
-                        Content.AutomaticCanvasSize = Enum.AutomaticSize.None
-                        Content.CanvasSize = UDim2.new(0,0,0, EList.AbsoluteContentSize.Y + 20)
-                    end)
-                end
-            end)
+            -- Canvas diupdate oleh setActive saat tab dipilih
 
             tabFrms[idx] = Content
-            if idx == 1 then setActive(1) end
+            -- JANGAN setActive di sini! Dipanggil setelah semua elemen dibuat.
+            -- Lihat return TObj di bawah.
 
             -- TAB OBJECT
             local TObj  = {}
@@ -991,6 +979,11 @@ function KreinGui:CreateWindow(cfg)
             function TObj:AddSeparator()
                 local s=Instance.new("Frame",Content)
                 s.Size=UDim2.new(1,0,0,1); s.BackgroundColor3=Theme.Separator; s.BorderSizePixel=0; s.LayoutOrder=nxt()
+            end
+
+            -- Tab pertama aktif secara default
+            if idx == 1 then
+                setActive(1)
             end
 
             return TObj
