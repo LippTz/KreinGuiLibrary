@@ -1297,15 +1297,16 @@ function KreinGui:CreateWindow(cfg)
             local WObj, _ = buildGUI()
             return WObj
         else
-            -- Buat GUI utama tapi sembunyikan window-nya dulu
+            -- Buat GUI utama dengan Enabled=false (tidak tampil tapi tetap render)
+            -- Enabled=false lebih aman dari Visible=false karena tidak
+            -- mempengaruhi AbsoluteSize/AbsolutePosition child elements
             local WObj, mainSG = buildGUI()
-            local win = mainSG and mainSG:FindFirstChild("Window")
-            if win then win.Visible = false end
+            mainSG.Enabled = false
 
-            -- Tampilkan key window di dalam SG yang sama
-            ShowKeyWindow(cfg, mainSG, function()
-                -- Key valid: tampilkan GUI utama
-                if win then win.Visible = true end
+            -- Tampilkan key window di SG TERPISAH agar tidak terpengaruh
+            ShowKeyWindow(cfg, nil, function()
+                -- Key valid: aktifkan GUI utama
+                mainSG.Enabled = true
             end)
 
             return WObj
