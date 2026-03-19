@@ -306,33 +306,46 @@ local function validateKeyFromUrl(key, url)
     return false
 end
 
-local function ShowKeyWindow(cfg, onSuccess)
+local function ShowKeyWindow(cfg, sg, onSuccess)
+    -- sg = ScreenGui yang sudah dibuat oleh buildGUI (shared)
+    -- Jika sg nil (dipanggil tanpa key system lama), buat SG sendiri
+    local ownSG = false
+    if not sg then
+        sg = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+        sg.Name           = "KreinGuiKey"
+        sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        sg.ResetOnSpawn   = false
+        sg.IgnoreGuiInset = true
+        ownSG = true
+    end
+
     local keyLink = cfg.KeyLink or "https://example.com"
     local keyUrl  = cfg.KeyUrl  or ""
 
-    local SG = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-    SG.Name = "KreinGuiKey"
-    SG.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    SG.ResetOnSpawn = false
-    SG.IgnoreGuiInset = true
-
-    -- Overlay blur background
-    local Overlay = Instance.new("Frame", SG)
+    -- Overlay
+    local Overlay = Instance.new("Frame", sg)
+    Overlay.Name = "_KeyOverlay"
     Overlay.Size = UDim2.new(1, 0, 1, 0)
     Overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     Overlay.BackgroundTransparency = 0.5
     Overlay.BorderSizePixel = 0
-    Overlay.ZIndex = 1
+    Overlay.ZIndex = 50
 
     -- Key Window Frame
-    local KWin = Instance.new("Frame", SG)
+    local KWin = Instance.new("Frame", sg)
+    KWin.Name = "_KeyWindow"
     KWin.Size = UDim2.new(0, 360, 0, 260)
     KWin.Position = UDim2.new(0.5, -180, 0.5, -130)
     KWin.BackgroundColor3 = Theme.WindowBG
     KWin.BorderSizePixel = 0
-    KWin.ZIndex = 2
+    KWin.ZIndex = 51
     Corner(KWin, 14)
     Stroke(KWin, Theme.WindowStroke, 1)
+    
+    local function destroyKeyUI()
+        Overlay:Destroy()
+        KWin:Destroy()
+    end
 
     -- Gradient background
     local kg = Instance.new("UIGradient", KWin)
@@ -410,7 +423,7 @@ local function ShowKeyWindow(cfg, onSuccess)
     KClose.TextColor3 = Theme.CloseRed
     KClose.ZIndex = 4; KClose.AutoButtonColor = false
     Corner(KClose, 6)
-    OnClick(KClose, function() SG:Destroy() end)
+    OnClick(KClose, function() sg:Destroy() end)
 
     -- Body area
     local KBody = Instance.new("Frame", KWin)
@@ -528,7 +541,7 @@ local function ShowKeyWindow(cfg, onSuccess)
     end)
 
     -- Close
-    OnClick(CloseBtn2, function() SG:Destroy() end)
+    OnClick(CloseBtn2, function() sg:Destroy() end)
 
     -- Apply key
     local checking = false
@@ -551,7 +564,7 @@ local function ShowKeyWindow(cfg, onSuccess)
                 ApplyBtn.Text = "✓ Apply Key"
                 StatusLbl.Text = "✓ Key valid! Membuka GUI..."; StatusLbl.TextColor3 = Color3.fromRGB(80,220,120)
                 task.delay(0.8, function()
-                    SG:Destroy()
+                    destroyKeyUI()
                     onSuccess()
                 end)
             else
@@ -1262,100 +1275,44 @@ function KreinGui:CreateWindow(cfg)
             return TObj
         end -- CreateTab
 
-        return WObj
+        return WObj, SG
     end -- buildGUI
 
     -- ── KEY SYSTEM CHECK ────────────────────────────────────
+    --[[
+        PENDEKATAN: GUI dibuat LANGSUNG tapi disembunyikan (Visible=false).
+        Key window tampil di atasnya.
+        - Key valid  → sembunyikan key window, tampilkan GUI utama
+        - Key invalid → tampilkan error di key window
+        - Close key  → hancurkan seluruh ScreenGui (GUI utama ikut hilang)
+
+        Dengan cara ini semua CreateTab / CreateButton / dll dari user
+        langsung masuk ke GUI asli — tidak ada proxy, tidak ada queue.
+        Isi GUI PASTI benar.
+    ]]
     if useKey then
         local saved = loadSavedKey()
         if saved then
-            -- Key masih valid, langsung buka GUI
-            return buildGUI()
+            -- Key masih valid, langsung tampilkan GUI normal
+            local WObj, _ = buildGUI()
+            return WObj
         else
-            --[[
-                MASALAH LAMA: proxy dummy langsung di-return, tapi semua
-                pemanggilan CreateTab / CreateButton / dll dari user
-                tidak pernah sampai ke GUI asli → isi GUI kosong.
+            -- Buat GUI utama tapi sembunyikan window-nya dulu
+            local WObj, mainSG = buildGUI()
+            local win = mainSG and mainSG:FindFirstChild("Window")
+            if win then win.Visible = false end
 
-                SOLUSI: Proxy Queue Pattern
-                - Semua method yang dipanggil user (CreateTab, Notify, dll)
-                  dicatat dalam antrian (queue).
-                - Setelah key valid dan buildGUI() selesai, semua antrian
-                  diputar ulang ke WObj asli satu per satu.
-                - Tab dan elemen yang dibuat user akan muncul normal.
-            ]]
-
-            local realWObj  = nil       -- WObj asli, diisi setelah key valid
-            local callQueue = {}        -- antrian { methodName, args }
-            local tabQueue  = {}        -- antrian CreateTab { name, calls[] }
-
-            -- Proxy WObj: catat semua pemanggilan ke antrian
-            local WProxy = {}
-
-            -- CreateTab: return TabProxy yang juga mencatat pemanggilan
-            function WProxy:CreateTab(name)
-                local tabEntry = { name = name, calls = {} }
-                table.insert(tabQueue, tabEntry)
-
-                -- TabProxy: catat semua pemanggilan elemen
-                local TProxy = {}
-                local tabMethods = {
-                    "CreateLabel","CreateSectionHeader","CreateButton",
-                    "CreateToggle","CreateSlider","CreateTextBox",
-                    "CreateDropdown","CreateColorPicker","CreateKeybind",
-                    "CreateInputNumber","CreateProgressBar","AddSeparator",
-                }
-                for _, mName in ipairs(tabMethods) do
-                    TProxy[mName] = function(_, cfg2)
-                        table.insert(tabEntry.calls, { method = mName, cfg = cfg2 })
-                        -- Return api dummy agar tidak error saat user simpan return value
-                        -- (misal: local bar = Tab:CreateProgressBar(...); bar:Set(50))
-                        local dummyApi = {}
-                        setmetatable(dummyApi, {
-                            __index = function(_, k)
-                                return function() return dummyApi end
-                            end
-                        })
-                        return dummyApi
-                    end
-                end
-                return TProxy
-            end
-
-            -- Notify, SaveConfig, LoadConfig: catat ke antrian umum
-            for _, mName in ipairs({"Notify","SaveConfig","LoadConfig"}) do
-                WProxy[mName] = function(_, ...)
-                    local args = {...}
-                    table.insert(callQueue, { method = mName, args = args })
-                end
-            end
-
-            -- Setelah key valid: buildGUI, replay semua antrian
-            ShowKeyWindow(cfg, function()
-                realWObj = buildGUI()
-
-                -- Replay Tab + elemen
-                for _, tabEntry in ipairs(tabQueue) do
-                    local realTab = realWObj:CreateTab(tabEntry.name)
-                    for _, call in ipairs(tabEntry.calls) do
-                        if realTab[call.method] then
-                            realTab[call.method](realTab, call.cfg)
-                        end
-                    end
-                end
-
-                -- Replay method umum (Notify dll)
-                for _, item in ipairs(callQueue) do
-                    if realWObj[item.method] then
-                        realWObj[item.method](realWObj, table.unpack(item.args))
-                    end
-                end
+            -- Tampilkan key window di dalam SG yang sama
+            ShowKeyWindow(cfg, mainSG, function()
+                -- Key valid: tampilkan GUI utama
+                if win then win.Visible = true end
             end)
 
-            return WProxy
+            return WObj
         end
     else
-        return buildGUI()
+        local WObj, _ = buildGUI()
+        return WObj
     end
 end -- CreateWindow
 
