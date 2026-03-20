@@ -1002,52 +1002,120 @@ function KreinGui:CreateWindow(cfg)
             local opts=cfg2.Options or {}; local sel=cfg2.Default or (opts[1] or ""); local open=false
             local c=Card(44); Pad(c,0,0,12,12)
             Lbl(c,cfg2.Title or "Dropdown",UDim2.new(1,-100,1,0)).TextSize=13
+
+            -- Badge selected value
             local SF=Instance.new("Frame",c)
             SF.Size=UDim2.new(0,90,0,28); SF.Position=UDim2.new(1,-90,0.5,-14)
             SF.BackgroundColor3=T.WindowBG; SF.BorderSizePixel=0; Cor(SF,6); Str(SF,T.ElementStr,1)
             local SL=Lbl(SF,sel,UDim2.new(1,-18,1,0),T.TextPri); SL.Position=UDim2.new(0,6,0,0); SL.Font=Enum.Font.Gotham; SL.TextSize=11
             local Arr=Lbl(SF,"▾",UDim2.new(0,14,1,0),T.TextMut,Enum.TextXAlignment.Center); Arr.Position=UDim2.new(1,-16,0,0); Arr.TextSize=12
+
+            -- Outer container: frame dengan background dan rounded corner
+            -- Ini yang di-tween size-nya (animasi buka/tutup)
             local DF=Instance.new("Frame",SG)
-            DF.Size=UDim2.new(0,100,0,0); DF.BackgroundColor3=T.ElementBG; DF.BorderSizePixel=0
-            DF.ClipsDescendants=true; DF.Visible=false; DF.ZIndex=160; Cor(DF,6); Str(DF,T.ElementStr,1)
-            local DL=Instance.new("UIListLayout",DF); DL.SortOrder=Enum.SortOrder.LayoutOrder; DL.Padding=UDim.new(0,2); Pad(DF,4,4,4,4)
+            DF.Size=UDim2.new(0,100,0,0)
+            DF.BackgroundColor3=T.ElementBG
+            DF.BorderSizePixel=0
+            DF.ClipsDescendants=true   -- clip agar animasi buka/tutup rapi
+            DF.Visible=false
+            DF.ZIndex=160
+            Cor(DF,6); Str(DF,T.ElementStr,1)
+
+            -- Inner ScrollingFrame di dalam DF — ini yang bisa di-scroll
+            local DSF=Instance.new("ScrollingFrame",DF)
+            DSF.Size=UDim2.new(1,0,1,0)
+            DSF.BackgroundTransparency=1
+            DSF.BorderSizePixel=0
+            DSF.ScrollBarThickness=3
+            DSF.ScrollBarImageColor3=T.Accent
+            DSF.CanvasSize=UDim2.new(0,0,0,0)
+            DSF.AutomaticCanvasSize=Enum.AutomaticSize.Y
+            DSF.ClipsDescendants=true
+            DSF.ZIndex=161
+            Pad(DSF,4,4,4,4)
+
+            local DL=Instance.new("UIListLayout",DSF)
+            DL.SortOrder=Enum.SortOrder.LayoutOrder
+            DL.Padding=UDim.new(0,2)
+
             local oH=32
+            -- Max tinggi dropdown: 5 item atau lebih kecil
+            local MAX_H=200
+
             local function closeDD()
                 if not open then return end; open=false
-                Tw(DF,{Size=UDim2.new(0,DF.Size.X.Offset,0,0)},0.15); Arr.Text="▾"
-                task.delay(0.16,function() DF.Visible=false end)
+                Tw(DF,{Size=UDim2.new(0,DF.Size.X.Offset,0,0)},0.18,Enum.EasingStyle.Quart,Enum.EasingDirection.In)
+                Arr.Text="▾"
+                task.delay(0.2,function() DF.Visible=false end)
             end
+
             for i,opt in ipairs(opts) do
-                local ob=Instance.new("TextButton",DF)
-                ob.Size=UDim2.new(1,0,0,oH-2); ob.BackgroundColor3=T.ElementBG; ob.BorderSizePixel=0
+                local ob=Instance.new("TextButton",DSF)
+                ob.Size=UDim2.new(1,0,0,oH-2)
+                ob.BackgroundColor3=T.ElementBG; ob.BorderSizePixel=0
                 ob.Text=opt; ob.TextSize=12; ob.Font=Enum.Font.Gotham; ob.TextColor3=T.TextSec
-                ob.TextXAlignment=Enum.TextXAlignment.Left; ob.AutoButtonColor=false; ob.ZIndex=161; ob.LayoutOrder=i
+                ob.TextXAlignment=Enum.TextXAlignment.Left; ob.AutoButtonColor=false
+                ob.ZIndex=162; ob.LayoutOrder=i
                 Cor(ob,4); Pad(ob,0,0,8,0)
                 ob.MouseEnter:Connect(function() Tw(ob,{BackgroundColor3=T.TabHov},0.12) end)
                 ob.MouseLeave:Connect(function() Tw(ob,{BackgroundColor3=T.ElementBG},0.12) end)
                 OnClick(ob,function() sel=opt; SL.Text=opt; pcall(cfg2.Callback or function()end,sel); closeDD() end)
             end
-            local totH=#opts*oH+8
+
+            -- Hitung tinggi konten asli
+            local contentH = #opts * oH + 8
+            -- Tinggi DF yang ditampilkan: max MAX_H
+            local dispH = math.min(contentH, MAX_H)
+            -- Kalau lebih dari MAX_H, tampilkan scrollbar
+            -- Kalau pas atau kurang, sembunyikan scrollbar
+            DSF.ScrollBarThickness = contentH > MAX_H and 3 or 0
+
             local function openDD()
-                local ap=SF.AbsolutePosition; local as=SF.AbsoluteSize; local w=math.max(as.X+10,100)
-                DF.Position=UDim2.new(0,ap.X,0,ap.Y+as.Y+4); DF.Size=UDim2.new(0,w,0,0)
-                DF.Visible=true; open=true; Tw(DF,{Size=UDim2.new(0,w,0,totH)},0.2); Arr.Text="▴"
+                local ap=SF.AbsolutePosition; local as=SF.AbsoluteSize
+                local w=math.max(as.X+10,100)
+                -- Cek apakah dropdown muat di bawah atau perlu di atas
+                local vp=workspace.CurrentCamera.ViewportSize
+                local spaceBelow=vp.Y - (ap.Y+as.Y+4)
+                local spaceAbove=ap.Y - 4
+                local posY
+                if spaceBelow >= dispH or spaceBelow >= spaceAbove then
+                    -- Buka ke bawah
+                    posY = ap.Y+as.Y+4
+                else
+                    -- Tidak cukup ruang di bawah → buka ke atas
+                    posY = ap.Y - dispH - 4
+                end
+                DF.Position=UDim2.new(0,ap.X,0,posY)
+                DF.Size=UDim2.new(0,w,0,0)
+                DF.Visible=true; open=true
+                Tw(DF,{Size=UDim2.new(0,w,0,dispH)},0.22,Enum.EasingStyle.Quart,Enum.EasingDirection.Out)
+                Arr.Text="▴"
             end
+
             local TB2=Instance.new("TextButton",c)
             TB2.Size=UDim2.new(1,0,1,0); TB2.BackgroundTransparency=1; TB2.BorderSizePixel=0; TB2.Text=""; TB2.AutoButtonColor=false
             OnClick(TB2,function() if open then closeDD() else openDD() end end)
             TB2.MouseEnter:Connect(function() Tw(c,{BackgroundColor3=T.ElementHov},0.15) end)
             TB2.MouseLeave:Connect(function() Tw(c,{BackgroundColor3=T.ElementBG},0.15) end)
+
+            -- Tutup saat klik di luar
             UserInput.InputBegan:Connect(function(i)
                 if not open or not isDown(i) then return end
                 task.defer(function()
                     if not open then return end
-                    local pos=i.Position; local dp=DF.AbsolutePosition; local ds=DF.AbsoluteSize; local cp2=c.AbsolutePosition; local cs=c.AbsoluteSize
+                    local pos=i.Position
+                    local dp=DF.AbsolutePosition; local ds=DF.AbsoluteSize
+                    local cp2=c.AbsolutePosition; local cs=c.AbsoluteSize
                     if not(pos.X>=dp.X and pos.X<=dp.X+ds.X and pos.Y>=dp.Y and pos.Y<=dp.Y+ds.Y) and
-                       not(pos.X>=cp2.X and pos.X<=cp2.X+cs.X and pos.Y>=cp2.Y and pos.Y<=cp2.Y+cs.Y) then closeDD() end
+                       not(pos.X>=cp2.X and pos.X<=cp2.X+cs.X and pos.Y>=cp2.Y and pos.Y<=cp2.Y+cs.Y) then
+                        closeDD()
+                    end
                 end)
             end)
-            local api={}; function api:Set(v) sel=v; SL.Text=v; pcall(cfg2.Callback or function()end,v) end; function api:Get() return sel end
+
+            local api={}
+            function api:Set(v) sel=v; SL.Text=v; pcall(cfg2.Callback or function()end,v) end
+            function api:Get() return sel end
             rfl(cfg2.Flag,api); return api
         end
 
