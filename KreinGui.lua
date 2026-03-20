@@ -413,10 +413,21 @@ function KreinGui:CreateWindow(cfg)
     SG.Name="KreinGui"; SG.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
     SG.ResetOnSpawn=false; SG.IgnoreGuiInset=true
 
-    -- Window
-    local Win = Instance.new("Frame",SG)
+    -- Wrapper: parent dari Win + ToggleBtn
+    -- Tidak clip supaya ToggleBtn bisa keluar di sisi kiri
+    -- Ukuran = Win + lebar tombol (32px) di kiri
+    local Wrapper = Instance.new("Frame", SG)
+    Wrapper.Name = "Wrapper"
+    Wrapper.Size = UDim2.new(0, 560+32, 0, 340)
+    Wrapper.Position = UDim2.new(0.5, -280-32, 0.5, -170)
+    Wrapper.BackgroundTransparency = 1
+    Wrapper.BorderSizePixel = 0
+    Wrapper.ClipsDescendants = false
+
+    -- Window (di dalam Wrapper, offset 32px dari kiri)
+    local Win = Instance.new("Frame", Wrapper)
     Win.Name="Window"; Win.Size=UDim2.new(0,560,0,340)
-    Win.Position=UDim2.new(0.5,-280,0.5,-170)
+    Win.Position=UDim2.new(0,32,0,0)
     Win.BackgroundColor3=T.WindowBG; Win.BorderSizePixel=0
     Win.ClipsDescendants=true
     Cor(Win,12); Str(Win,T.WinStr,1)
@@ -501,140 +512,138 @@ function KreinGui:CreateWindow(cfg)
     Mb.Text="—"; Mb.TextSize=13; Mb.Font=Enum.Font.GothamBold
     Mb.TextColor3=T.MinGray; Mb.ZIndex=6; Mb.AutoButtonColor=false
     Cor(Mb,7)
+    -- Helper: update posisi vertikal ToggleBtn agar center di Wrapper
+    local function syncToggleBtnY(h)
+        ToggleBtn.Position = UDim2.new(0, 0, 0, h/2 - 40)
+    end
+
     local mini=false
     OnClick(Mb,function()
         mini=not mini
         if mini then
             Tw(Win,{Size=UDim2.new(0,560,0,52)},0.25)
+            Tw(Wrapper,{Size=UDim2.new(0,560+32,0,52)},0.25)
             task.delay(0.15,function()
                 ABar.Visible=false
                 local gl=Win:FindFirstChild("ABarGlow")
                 if gl then gl.Visible=false end
+                syncToggleBtnY(52)
             end)
         else
             ABar.Visible=true
             local gl=Win:FindFirstChild("ABarGlow")
             if gl then gl.Visible=true end
             Tw(Win,{Size=UDim2.new(0,560,0,340)},0.25)
+            Tw(Wrapper,{Size=UDim2.new(0,560+32,0,340)},0.25)
+            task.delay(0.26,function()
+                syncToggleBtnY(340)
+            end)
         end
     end)
 
-    EnableDrag(Win,H)
+    EnableDrag(Wrapper,H)
 
-    -- ── TOGGLE VISIBILITY BUTTON ─────────────────────────────
-    -- Tombol kecil di kiri window untuk hide/show GUI
-    -- Selalu visible meskipun window disembunyikan
-    local ToggleBtn=Instance.new("TextButton",SG)
-    ToggleBtn.Name="KreinToggleBtn"
-    ToggleBtn.Size=UDim2.new(0,28,0,80)
-    ToggleBtn.Position=UDim2.new(0.5,-280-34,0.5,-40)  -- kiri window, vertikal tengah
-    ToggleBtn.BackgroundColor3=Color3.fromRGB(10,10,18)
-    ToggleBtn.BorderSizePixel=0
-    ToggleBtn.Text=""
-    ToggleBtn.AutoButtonColor=false
-    ToggleBtn.ZIndex=200
-    Cor(ToggleBtn,8)
-    local TBStr=Instance.new("UIStroke",ToggleBtn)
-    TBStr.Color=T.Accent; TBStr.Thickness=1; TBStr.Transparency=0.4
+    -- ── TOGGLE VISIBILITY BUTTON ────────────────────────────
+    -- Parent ke Wrapper (bukan SG) → otomatis ikut saat drag
+    -- Posisi: di kiri Win (X=0), vertikal tengah Wrapper
+    -- Wrapper tidak clip → tombol kelihatan walau di luar Win
+    local ToggleBtn = Instance.new("TextButton", Wrapper)
+    ToggleBtn.Name = "KreinToggleBtn"
+    ToggleBtn.Size = UDim2.new(0, 28, 0, 80)
+    -- Posisi: X=0 (paling kiri Wrapper), Y tengah Wrapper
+    ToggleBtn.Position = UDim2.new(0, 0, 0.5, -40)
+    ToggleBtn.BackgroundColor3 = T.WindowBG
+    ToggleBtn.BorderSizePixel = 0
+    ToggleBtn.Text = ""
+    ToggleBtn.AutoButtonColor = false
+    ToggleBtn.ZIndex = 10
+    Cor(ToggleBtn, 8)
+    local TBStr = Instance.new("UIStroke", ToggleBtn)
+    TBStr.Color = T.Accent; TBStr.Thickness = 1; TBStr.Transparency = 0.3
 
-    -- Icon panah di dalam tombol (SVG-like dari text)
-    local TBIcon=Instance.new("TextLabel",ToggleBtn)
-    TBIcon.Size=UDim2.new(1,0,0,20)
-    TBIcon.Position=UDim2.new(0,0,0.5,-28)
-    TBIcon.BackgroundTransparency=1
-    TBIcon.BorderSizePixel=0
-    TBIcon.Text="◀"  -- panah kiri = GUI visible
-    TBIcon.TextSize=11
-    TBIcon.Font=Enum.Font.GothamBold
-    TBIcon.TextColor3=T.Accent
-    TBIcon.TextXAlignment=Enum.TextXAlignment.Center
-    TBIcon.ZIndex=201
+    -- Panah
+    local TBIcon = Instance.new("TextLabel", ToggleBtn)
+    TBIcon.Size = UDim2.new(1,0,0,16)
+    TBIcon.Position = UDim2.new(0,0,0.5,-26)
+    TBIcon.BackgroundTransparency = 1; TBIcon.BorderSizePixel = 0
+    TBIcon.Text = "◀"; TBIcon.TextSize = 10
+    TBIcon.Font = Enum.Font.GothamBold
+    TBIcon.TextColor3 = T.Accent
+    TBIcon.TextXAlignment = Enum.TextXAlignment.Center
+    TBIcon.ZIndex = 11
 
-    -- Label K kecil di tengah tombol
-    local TBLabel=Instance.new("TextLabel",ToggleBtn)
-    TBLabel.Size=UDim2.new(1,0,0,14)
-    TBLabel.Position=UDim2.new(0,0,0.5,-7)
-    TBLabel.BackgroundTransparency=1
-    TBLabel.BorderSizePixel=0
-    TBLabel.Text="K"
-    TBLabel.TextSize=12
-    TBLabel.Font=Enum.Font.GothamBold
-    TBLabel.TextColor3=T.Accent
-    TBLabel.TextXAlignment=Enum.TextXAlignment.Center
-    TBLabel.ZIndex=201
+    -- Logo K
+    local TBLabel = Instance.new("TextLabel", ToggleBtn)
+    TBLabel.Size = UDim2.new(1,0,0,14)
+    TBLabel.Position = UDim2.new(0,0,0.5,-7)
+    TBLabel.BackgroundTransparency = 1; TBLabel.BorderSizePixel = 0
+    TBLabel.Text = "K"; TBLabel.TextSize = 13
+    TBLabel.Font = Enum.Font.GothamBold
+    TBLabel.TextColor3 = T.Accent
+    TBLabel.TextXAlignment = Enum.TextXAlignment.Center
+    TBLabel.ZIndex = 11
 
-    -- Label "GUI" di bawah
-    local TBSub=Instance.new("TextLabel",ToggleBtn)
-    TBSub.Size=UDim2.new(1,0,0,14)
-    TBSub.Position=UDim2.new(0,0,0.5,12)
-    TBSub.BackgroundTransparency=1
-    TBSub.BorderSizePixel=0
-    TBSub.Text="GUI"
-    TBSub.TextSize=8
-    TBSub.Font=Enum.Font.GothamBold
-    TBSub.TextColor3=Color3.new(T.Accent.R*0.6,T.Accent.G*0.6,T.Accent.B*0.6)
-    TBSub.TextXAlignment=Enum.TextXAlignment.Center
-    TBSub.ZIndex=201
+    -- Teks GUI
+    local TBSub = Instance.new("TextLabel", ToggleBtn)
+    TBSub.Size = UDim2.new(1,0,0,12)
+    TBSub.Position = UDim2.new(0,0,0.5,14)
+    TBSub.BackgroundTransparency = 1; TBSub.BorderSizePixel = 0
+    TBSub.Text = "GUI"; TBSub.TextSize = 8
+    TBSub.Font = Enum.Font.GothamBold
+    TBSub.TextColor3 = Color3.new(T.Accent.R*0.65, T.Accent.G*0.65, T.Accent.B*0.65)
+    TBSub.TextXAlignment = Enum.TextXAlignment.Center
+    TBSub.ZIndex = 11
 
-    -- Glow effect strip kiri
-    local TBGlow=Instance.new("Frame",ToggleBtn)
-    TBGlow.Size=UDim2.new(0,3,0.7,0)
-    TBGlow.Position=UDim2.new(1,-3,0.15,0)
-    TBGlow.BackgroundColor3=T.Accent
-    TBGlow.BackgroundTransparency=0.4
-    TBGlow.BorderSizePixel=0
-    TBGlow.ZIndex=201
-    Cor(TBGlow,2)
+    -- Strip accent kanan tombol
+    local TBGlow = Instance.new("Frame", ToggleBtn)
+    TBGlow.Size = UDim2.new(0,3,0.65,0)
+    TBGlow.Position = UDim2.new(1,-3,0.175,0)
+    TBGlow.BackgroundColor3 = T.Accent
+    TBGlow.BackgroundTransparency = 0.35
+    TBGlow.BorderSizePixel = 0; TBGlow.ZIndex = 11
+    Cor(TBGlow, 2)
 
     -- State & Logic
-    local guiVisible=true
+    local guiVisible = true
+
     local function updateToggleBtn()
         if guiVisible then
-            TBIcon.Text="◀"
-            TBStr.Transparency=0.4
-            TBGlow.BackgroundTransparency=0.4
+            TBIcon.Text = "◀"
+            TBStr.Transparency = 0.3
+            TBGlow.BackgroundTransparency = 0.35
         else
-            TBIcon.Text="▶"
-            TBStr.Transparency=0.1
-            TBStr.Color=T.AccentHov
-            TBGlow.BackgroundTransparency=0.1
+            TBIcon.Text = "▶"
+            TBStr.Transparency = 0.05
+            TBStr.Color = T.AccentHov
+            TBGlow.BackgroundTransparency = 0.1
         end
     end
 
-    OnClick(ToggleBtn,function()
-        guiVisible=not guiVisible
+    OnClick(ToggleBtn, function()
+        guiVisible = not guiVisible
         if guiVisible then
-            -- Tampilkan window
-            Win.Visible=true
-            Tw(Win,{BackgroundTransparency=0},0.2)
-            Tw(ToggleBtn,{Position=UDim2.new(0.5,-280-34,0.5,-40)},0.2,Enum.EasingStyle.Back,Enum.EasingDirection.Out)
+            -- Tampilkan: Win muncul kembali
+            Win.Visible = true
+            Tw(Win, {BackgroundTransparency=0}, 0.2)
         else
-            -- Sembunyikan window
-            Tw(Win,{BackgroundTransparency=1},0.18)
-            task.delay(0.2,function() Win.Visible=false end)
-            Tw(ToggleBtn,{Position=UDim2.new(0,0,0.5,-40)},0.2,Enum.EasingStyle.Back,Enum.EasingDirection.Out)
+            -- Sembunyikan: Win fade out
+            Tw(Win, {BackgroundTransparency=1}, 0.18)
+            task.delay(0.2, function() Win.Visible = false end)
         end
         updateToggleBtn()
     end)
 
-    -- Hover effect
+    -- Hover
     ToggleBtn.MouseEnter:Connect(function()
-        Tw(ToggleBtn,{BackgroundColor3=Color3.fromRGB(16,16,28)},0.12)
-        TBStr.Transparency=0
+        Tw(ToggleBtn, {BackgroundColor3=T.ElementHov}, 0.12)
+        TBStr.Transparency = 0
     end)
     ToggleBtn.MouseLeave:Connect(function()
-        Tw(ToggleBtn,{BackgroundColor3=Color3.fromRGB(10,10,18)},0.12)
-        TBStr.Transparency= guiVisible and 0.4 or 0.1
+        Tw(ToggleBtn, {BackgroundColor3=T.WindowBG}, 0.12)
+        TBStr.Transparency = guiVisible and 0.3 or 0.05
     end)
 
-    -- Sinkronkan posisi toggle button saat window di-drag
-    Win:GetPropertyChangedSignal("Position"):Connect(function()
-        local wp=Win.Position
-        ToggleBtn.Position=UDim2.new(
-            wp.X.Scale, wp.X.Offset-34,
-            wp.Y.Scale, wp.Y.Offset+(340/2)-40
-        )
-    end)
+
 
     -- Body
     local Body=Instance.new("Frame",Win)
@@ -1138,10 +1147,12 @@ function KreinGui:CreateWindow(cfg)
     ShowLoading(SG, T.Accent, title, function()
         Win.Visible = true
         Win.BackgroundTransparency = 1
-        -- Slide in dari bawah + fade in
-        Win.Position = UDim2.new(0.5,-280,0.5,-140)
-        Tw(Win, {BackgroundTransparency=0, Position=UDim2.new(0.5,-280,0.5,-170)}, 0.4,
+        -- Slide in dari bawah + fade in (gerak Wrapper)
+        Wrapper.Position = UDim2.new(0.5,-280-32,0.5,-140)
+        Tw(Wrapper, {Position=UDim2.new(0.5,-280-32,0.5,-170)}, 0.4,
             Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+        Tw(Win, {BackgroundTransparency=0}, 0.4)
+        syncToggleBtnY(340)
     end)
 
     return W
