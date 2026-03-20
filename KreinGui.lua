@@ -521,21 +521,23 @@ function KreinGui:CreateWindow(cfg)
     OnClick(Mb,function()
         mini=not mini
         if mini then
-            Tw(Win,{Size=UDim2.new(0,560,0,52)},0.25)
-            Tw(Wrapper,{Size=UDim2.new(0,560+32,0,52)},0.25)
-            task.delay(0.15,function()
+            -- Minimize: squeeze ke atas dengan Quart easing
+            Tw(Win,    {Size=UDim2.new(0,560,0,52)},   0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+            Tw(Wrapper,{Size=UDim2.new(0,560+32,0,52)},0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+            task.delay(0.2,function()
                 ABar.Visible=false
                 local gl=Win:FindFirstChild("ABarGlow")
                 if gl then gl.Visible=false end
                 syncToggleBtnY(52)
             end)
         else
+            -- Restore: expand ke bawah dengan Back easing (sedikit bounce)
             ABar.Visible=true
             local gl=Win:FindFirstChild("ABarGlow")
             if gl then gl.Visible=true end
-            Tw(Win,{Size=UDim2.new(0,560,0,340)},0.25)
-            Tw(Wrapper,{Size=UDim2.new(0,560+32,0,340)},0.25)
-            task.delay(0.26,function()
+            Tw(Win,    {Size=UDim2.new(0,560,0,340)},   0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+            Tw(Wrapper,{Size=UDim2.new(0,560+32,0,340)},0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+            task.delay(0.35,function()
                 syncToggleBtnY(340)
             end)
         end
@@ -627,29 +629,33 @@ function KreinGui:CreateWindow(cfg)
         end
     end
 
-    -- Simpan posisi Wrapper terakhir saat GUI visible
-    -- agar bisa dikembalikan saat GUI di-show lagi
-    local lastWrapperPos = Wrapper.Position
-
     OnClick(ToggleBtn, function()
         guiVisible = not guiVisible
         if guiVisible then
-            -- Kembalikan Wrapper ke posisi semula (sebelum di-hide)
-            Wrapper.Position = UDim2.new(lastWrapperPos.X.Scale, lastWrapperPos.X.Offset, lastWrapperPos.Y.Scale, lastWrapperPos.Y.Offset)
+            -- ── SHOW: Wrapper slide dari kiri kembali ke posisi asli ──
             Win.Visible = true
-            Tw(Win, {BackgroundTransparency=0}, 0.2)
-            -- Animasi slide dari kiri ke posisi asli
-            Tw(Wrapper, {Position=UDim2.new(lastWrapperPos.X.Scale, lastWrapperPos.X.Offset, lastWrapperPos.Y.Scale, lastWrapperPos.Y.Offset)}, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+            -- Mulai dari pojok kiri, fade in sambil slide ke kanan
+            Tw(Win, {BackgroundTransparency = 0}, 0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+            Tw(Wrapper, {
+                Position = UDim2.new(
+                    lastWrapperPos.X.Scale, lastWrapperPos.X.Offset,
+                    lastWrapperPos.Y.Scale, lastWrapperPos.Y.Offset
+                )
+            }, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
         else
-            -- Simpan posisi sekarang sebelum pindah
+            -- ── HIDE: Window shrink + fade, tombol slide ke kiri ──
             lastWrapperPos = Wrapper.Position
-            -- Fade out window
-            Tw(Win, {BackgroundTransparency=1}, 0.18)
-            task.delay(0.2, function() Win.Visible = false end)
-            -- Geser Wrapper ke pojok kiri layar
-            -- Tombol tetap kelihatan di pojok kiri, window hilang
             local currentY = Wrapper.Position.Y
-            Tw(Wrapper, {Position=UDim2.new(0, -4, currentY.Scale, currentY.Offset)}, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+            -- Window scale down sedikit sambil fade out
+            Tw(Win, {BackgroundTransparency = 1},
+                0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+            task.delay(0.25, function()
+                Win.Visible = false
+            end)
+            -- Wrapper geser ke pojok kiri dengan spring
+            Tw(Wrapper, {
+                Position = UDim2.new(0, -4, currentY.Scale, currentY.Offset)
+            }, 0.35, Enum.EasingStyle.Back, Enum.EasingDirection.InOut)
         end
         updateToggleBtn()
     end)
@@ -705,14 +711,20 @@ function KreinGui:CreateWindow(cfg)
         tActive=idx
         for i,b in ipairs(tBtns) do
             local on=(i==idx)
-            Tw(b,{BackgroundColor3=on and T.TabOn or T.TabDef},0.18)
-            local l=b:FindFirstChild("L"); if l then Tw(l,{TextColor3=on and T.TabOnText or T.TabOffText},0.18) end
+            Tw(b,{BackgroundColor3=on and T.TabOn or T.TabDef},0.2,
+                Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+            local l=b:FindFirstChild("L")
+            if l then Tw(l,{TextColor3=on and T.TabOnText or T.TabOffText},0.2) end
             local bar=b:FindFirstChild("B"); if bar then bar.Visible=on end
         end
-        -- KUNCI: gunakan Size=0 untuk hide, bukan Visible=false
+        -- Hide non-active tabs dengan Size=0
+        -- Active tab: Size 0→normal dengan animasi
         for i,f in ipairs(tFrms) do
             if i==idx then
-                f.Size=UDim2.new(1,0,1,0)
+                f.Size=UDim2.new(0,0,0,0)
+                -- Expand ke full size dengan Quart smooth
+                Tw(f,{Size=UDim2.new(1,0,1,0)},0.22,
+                    Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
             else
                 f.Size=UDim2.new(0,0,0,0)
             end
@@ -1168,14 +1180,18 @@ function KreinGui:CreateWindow(cfg)
     ShowLoading(SG, T.Accent, title, function()
         Win.Visible = true
         Win.BackgroundTransparency = 1
-        -- Slide in dari bawah + fade in (gerak Wrapper)
-        Wrapper.Position = UDim2.new(0.5,-280-32,0.5,-140)
-        Tw(Wrapper, {Position=UDim2.new(0.5,-280-32,0.5,-170)}, 0.4,
-            Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-        Tw(Win, {BackgroundTransparency=0}, 0.4)
+        -- Mulai dari bawah layar, scale masuk
+        Wrapper.Position = UDim2.new(0.5,-280-32,0.5,-130)
+        -- Slide ke atas ke posisi normal dengan Back bounce
+        Tw(Wrapper, {Position=UDim2.new(0.5,-280-32,0.5,-170)},
+            0.55, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+        -- Fade in sedikit delayed agar terasa bertahap
+        task.delay(0.05, function()
+            Tw(Win, {BackgroundTransparency=0},
+                0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+        end)
         syncToggleBtnY(340)
-        -- Simpan posisi awal sebagai lastWrapperPos
-        task.delay(0.41, function()
+        task.delay(0.6, function()
             lastWrapperPos = Wrapper.Position
         end)
     end)
