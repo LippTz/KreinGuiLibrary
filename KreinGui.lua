@@ -6,7 +6,7 @@
 ║   ██╔═██╗ ██╔══██╗██╔══╝  ██║██║╚██╗██║██║   ██║██║        ║
 ║   ██║  ██╗██║  ██║███████╗██║██║ ╚████║╚██████╔╝██║        ║
 ║   ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚═╝        ║
-║           GUI Library  —  by @uniquadev  v4.0.0              ║
+║           GUI Library  —  by @uniquadev  v4.1.0              ║
 ╚══════════════════════════════════════════════════════════════╝
 
   QUICK START:
@@ -88,42 +88,44 @@ end
 -- ============================================================
 -- THEME
 -- ============================================================
--- NEON DARK THEME
+-- ICE WHITE THEME
 local T = {
-    WindowBG    = Color3.fromRGB(8, 8, 14),
-    HeaderBG    = Color3.fromRGB(10, 10, 18),
-    TabBG       = Color3.fromRGB(10, 10, 18),
-    ElementBG   = Color3.fromRGB(16, 16, 26),
-    ElementHov  = Color3.fromRGB(22, 22, 34),
-    ElementStr  = Color3.fromRGB(0, 255, 180),   -- neon green border
-    TabDef      = Color3.fromRGB(12, 12, 20),
-    TabHov      = Color3.fromRGB(0, 255, 180),
-    TabOn       = Color3.fromRGB(0, 255, 180),
-    TabOnText   = Color3.fromRGB(8, 8, 14),
-    TabOffText  = Color3.fromRGB(0, 180, 130),
-    Accent      = Color3.fromRGB(0, 255, 180),
-    AccentHov   = Color3.fromRGB(80, 255, 210),
-    AccentDark  = Color3.fromRGB(0, 160, 110),
-    ToggleOff   = Color3.fromRGB(20, 20, 32),
-    ToggleOn    = Color3.fromRGB(0, 255, 180),
-    TextPri     = Color3.fromRGB(0, 255, 180),
-    TextSec     = Color3.fromRGB(0, 200, 145),
-    TextMut     = Color3.fromRGB(0, 120, 90),
-    SecText     = Color3.fromRGB(0, 150, 110),
-    CloseRed    = Color3.fromRGB(255, 80, 80),
-    MinGray     = Color3.fromRGB(0, 180, 130),
-    Sep         = Color3.fromRGB(0, 255, 180),
-    WinStr      = Color3.fromRGB(0, 255, 180),
+    WindowBG    = Color3.fromRGB(10, 15, 20),
+    HeaderBG    = Color3.fromRGB(15, 21, 28),
+    TabBG       = Color3.fromRGB(20, 28, 36),
+    ElementBG   = Color3.fromRGB(26, 36, 48),
+    ElementHov  = Color3.fromRGB(32, 44, 58),
+    ElementStr  = Color3.fromRGB(180, 220, 255),
+    TabDef      = Color3.fromRGB(20, 28, 36),
+    TabHov      = Color3.fromRGB(200, 235, 255),
+    TabOn       = Color3.fromRGB(224, 244, 255),
+    TabOnText   = Color3.fromRGB(10, 15, 20),
+    TabOffText  = Color3.fromRGB(120, 170, 210),
+    Accent      = Color3.fromRGB(200, 230, 255),
+    AccentHov   = Color3.fromRGB(224, 244, 255),
+    AccentDark  = Color3.fromRGB(100, 160, 210),
+    ToggleOff   = Color3.fromRGB(30, 42, 56),
+    ToggleOn    = Color3.fromRGB(200, 230, 255),
+    TextPri     = Color3.fromRGB(220, 238, 255),
+    TextSec     = Color3.fromRGB(160, 200, 235),
+    TextMut     = Color3.fromRGB(90, 130, 170),
+    SecText     = Color3.fromRGB(120, 165, 200),
+    CloseRed    = Color3.fromRGB(255, 90, 90),
+    MinGray     = Color3.fromRGB(140, 185, 220),
+    Sep         = Color3.fromRGB(50, 75, 100),
+    WinStr      = Color3.fromRGB(80, 130, 180),
 }
 
 local Presets = {
+    Ice      = {Accent=Color3.fromRGB(200,230,255), ToggleOn=Color3.fromRGB(200,230,255), TabOn=Color3.fromRGB(224,244,255), WindowBG=Color3.fromRGB(10,15,20),  HeaderBG=Color3.fromRGB(15,21,28)},
     Neon     = {Accent=Color3.fromRGB(0,255,180),   ToggleOn=Color3.fromRGB(0,255,180),   TabOn=Color3.fromRGB(0,255,180),   WindowBG=Color3.fromRGB(8,8,14),    HeaderBG=Color3.fromRGB(10,10,18)},
+    Blood    = {Accent=Color3.fromRGB(255,51,85),   ToggleOn=Color3.fromRGB(255,51,85),   TabOn=Color3.fromRGB(255,51,85),   WindowBG=Color3.fromRGB(14,8,8),    HeaderBG=Color3.fromRGB(18,10,10)},
+    Ocean    = {Accent=Color3.fromRGB(0,180,255),   ToggleOn=Color3.fromRGB(0,180,255),   TabOn=Color3.fromRGB(0,180,255),   WindowBG=Color3.fromRGB(6,12,20),   HeaderBG=Color3.fromRGB(8,15,28)},
+    Purple   = {Accent=Color3.fromRGB(176,96,255),  ToggleOn=Color3.fromRGB(176,96,255),  TabOn=Color3.fromRGB(176,96,255),  WindowBG=Color3.fromRGB(12,8,15),   HeaderBG=Color3.fromRGB(16,12,20)},
+    Gold     = {Accent=Color3.fromRGB(255,194,0),   ToggleOn=Color3.fromRGB(255,194,0),   TabOn=Color3.fromRGB(255,194,0),   WindowBG=Color3.fromRGB(14,12,6),   HeaderBG=Color3.fromRGB(20,16,8)},
+    Rose     = {Accent=Color3.fromRGB(255,80,144),  ToggleOn=Color3.fromRGB(255,80,144),  TabOn=Color3.fromRGB(255,80,144),  WindowBG=Color3.fromRGB(15,8,12),   HeaderBG=Color3.fromRGB(20,11,16)},
+    Matrix   = {Accent=Color3.fromRGB(0,224,64),    ToggleOn=Color3.fromRGB(0,224,64),    TabOn=Color3.fromRGB(0,224,64),    WindowBG=Color3.fromRGB(2,14,4),    HeaderBG=Color3.fromRGB(3,16,6)},
     Default  = {Accent=Color3.fromRGB(99,102,241),  ToggleOn=Color3.fromRGB(99,102,241),  TabOn=Color3.fromRGB(99,102,241),  WindowBG=Color3.fromRGB(28,28,32),  HeaderBG=Color3.fromRGB(22,22,26)},
-    Rose     = {Accent=Color3.fromRGB(244,63,94),   ToggleOn=Color3.fromRGB(244,63,94),   TabOn=Color3.fromRGB(244,63,94),   WindowBG=Color3.fromRGB(30,20,24),  HeaderBG=Color3.fromRGB(22,14,18)},
-    Emerald  = {Accent=Color3.fromRGB(16,185,129),  ToggleOn=Color3.fromRGB(16,185,129),  TabOn=Color3.fromRGB(16,185,129),  WindowBG=Color3.fromRGB(18,28,24),  HeaderBG=Color3.fromRGB(12,20,18)},
-    Amber    = {Accent=Color3.fromRGB(245,158,11),  ToggleOn=Color3.fromRGB(245,158,11),  TabOn=Color3.fromRGB(245,158,11),  WindowBG=Color3.fromRGB(28,24,16),  HeaderBG=Color3.fromRGB(22,18,10)},
-    Midnight = {Accent=Color3.fromRGB(139,92,246),  ToggleOn=Color3.fromRGB(139,92,246),  TabOn=Color3.fromRGB(139,92,246),  WindowBG=Color3.fromRGB(15,15,25),  HeaderBG=Color3.fromRGB(10,10,18)},
-    Cyan     = {Accent=Color3.fromRGB(0,220,255),   ToggleOn=Color3.fromRGB(0,220,255),   TabOn=Color3.fromRGB(0,220,255),   WindowBG=Color3.fromRGB(6,12,18),   HeaderBG=Color3.fromRGB(8,14,22)},
 }
 
 -- ============================================================
@@ -419,7 +421,7 @@ function KreinGui:CreateWindow(cfg)
     Win.ClipsDescendants=true
     Cor(Win,12); Str(Win,T.WinStr,1)
     local g=Instance.new("UIGradient",Win)
-    g.Color=ColorSequence.new(Color3.fromRGB(14,14,24),Color3.fromRGB(6,6,12))
+    g.Color=ColorSequence.new(Color3.fromRGB(18,28,40),Color3.fromRGB(8,14,22))
     g.Rotation=135
 
     -- Sembunyikan window sampai loading selesai
@@ -439,19 +441,48 @@ function KreinGui:CreateWindow(cfg)
     ABar.BackgroundColor3=T.Accent; ABar.BorderSizePixel=0; ABar.ZIndex=3
     StartSnake(ABar, T.Accent)
 
-    -- Dot kiri header
-    local Dot=Instance.new("Frame",H)
-    Dot.Size=UDim2.new(0,7,0,7); Dot.Position=UDim2.new(0,14,0.5,-3)
-    Dot.BackgroundColor3=T.Accent; Dot.BorderSizePixel=0; Dot.ZIndex=5
-    Cor(Dot,4)
+    -- ── LOGO K (ciri khas @uniquadev) ─────────────────────────
+    local LogoBg=Instance.new("Frame",H)
+    LogoBg.Size=UDim2.new(0,34,0,34)
+    LogoBg.Position=UDim2.new(0,10,0.5,-17)
+    LogoBg.BackgroundColor3=T.Accent
+    LogoBg.BackgroundTransparency=0.12
+    LogoBg.BorderSizePixel=0
+    LogoBg.ZIndex=5
+    Cor(LogoBg,8)
+    -- Border neon di logo
+    local LogoStr=Instance.new("UIStroke",LogoBg)
+    LogoStr.Color=T.Accent; LogoStr.Thickness=1.5; LogoStr.Transparency=0.3
 
-    -- Title
-    local TL=Lbl(H,title,UDim2.new(0,280,0,22),T.TextPri)
-    TL.Position=sub~="" and UDim2.new(0,28,0,5) or UDim2.new(0,28,0,0)
+    -- Huruf K
+    local LogoK=Instance.new("TextLabel",LogoBg)
+    LogoK.Size=UDim2.new(1,0,1,0)
+    LogoK.BackgroundTransparency=1
+    LogoK.BorderSizePixel=0
+    LogoK.Text="K"
+    LogoK.TextSize=18
+    LogoK.Font=Enum.Font.GothamBold
+    LogoK.TextColor3=Color3.fromRGB(10,15,20)  -- gelap agar kontras dengan accent
+    LogoK.TextXAlignment=Enum.TextXAlignment.Center
+    LogoK.TextYAlignment=Enum.TextYAlignment.Center
+    LogoK.ZIndex=6
+
+    -- Dot aksen kecil di pojok kanan bawah logo
+    local LogoDot=Instance.new("Frame",LogoBg)
+    LogoDot.Size=UDim2.new(0,6,0,6)
+    LogoDot.Position=UDim2.new(1,-5,1,-5)
+    LogoDot.BackgroundColor3=Color3.fromRGB(8,8,14)
+    LogoDot.BorderSizePixel=0
+    LogoDot.ZIndex=7
+    Cor(LogoDot,3)
+
+    -- Title (geser kanan karena ada logo)
+    local TL=Lbl(H,title,UDim2.new(0,260,0,22),T.TextPri)
+    TL.Position=sub~="" and UDim2.new(0,52,0,5) or UDim2.new(0,52,0,15)
     TL.Font=Enum.Font.GothamBold; TL.TextSize=15; TL.ZIndex=5
     if sub~="" then
-        local SL=Lbl(H,sub,UDim2.new(0,280,0,18),T.TextMut)
-        SL.Position=UDim2.new(0,28,0,28); SL.Font=Enum.Font.Gotham; SL.TextSize=11; SL.ZIndex=5
+        local SL=Lbl(H,sub,UDim2.new(0,260,0,18),T.TextMut)
+        SL.Position=UDim2.new(0,52,0,28); SL.Font=Enum.Font.Gotham; SL.TextSize=11; SL.ZIndex=5
     end
 
     -- Close
@@ -489,6 +520,121 @@ function KreinGui:CreateWindow(cfg)
     end)
 
     EnableDrag(Win,H)
+
+    -- ── TOGGLE VISIBILITY BUTTON ─────────────────────────────
+    -- Tombol kecil di kiri window untuk hide/show GUI
+    -- Selalu visible meskipun window disembunyikan
+    local ToggleBtn=Instance.new("TextButton",SG)
+    ToggleBtn.Name="KreinToggleBtn"
+    ToggleBtn.Size=UDim2.new(0,28,0,80)
+    ToggleBtn.Position=UDim2.new(0.5,-280-34,0.5,-40)  -- kiri window, vertikal tengah
+    ToggleBtn.BackgroundColor3=Color3.fromRGB(10,10,18)
+    ToggleBtn.BorderSizePixel=0
+    ToggleBtn.Text=""
+    ToggleBtn.AutoButtonColor=false
+    ToggleBtn.ZIndex=200
+    Cor(ToggleBtn,8)
+    local TBStr=Instance.new("UIStroke",ToggleBtn)
+    TBStr.Color=T.Accent; TBStr.Thickness=1; TBStr.Transparency=0.4
+
+    -- Icon panah di dalam tombol (SVG-like dari text)
+    local TBIcon=Instance.new("TextLabel",ToggleBtn)
+    TBIcon.Size=UDim2.new(1,0,0,20)
+    TBIcon.Position=UDim2.new(0,0,0.5,-28)
+    TBIcon.BackgroundTransparency=1
+    TBIcon.BorderSizePixel=0
+    TBIcon.Text="◀"  -- panah kiri = GUI visible
+    TBIcon.TextSize=11
+    TBIcon.Font=Enum.Font.GothamBold
+    TBIcon.TextColor3=T.Accent
+    TBIcon.TextXAlignment=Enum.TextXAlignment.Center
+    TBIcon.ZIndex=201
+
+    -- Label K kecil di tengah tombol
+    local TBLabel=Instance.new("TextLabel",ToggleBtn)
+    TBLabel.Size=UDim2.new(1,0,0,14)
+    TBLabel.Position=UDim2.new(0,0,0.5,-7)
+    TBLabel.BackgroundTransparency=1
+    TBLabel.BorderSizePixel=0
+    TBLabel.Text="K"
+    TBLabel.TextSize=12
+    TBLabel.Font=Enum.Font.GothamBold
+    TBLabel.TextColor3=T.Accent
+    TBLabel.TextXAlignment=Enum.TextXAlignment.Center
+    TBLabel.ZIndex=201
+
+    -- Label "GUI" di bawah
+    local TBSub=Instance.new("TextLabel",ToggleBtn)
+    TBSub.Size=UDim2.new(1,0,0,14)
+    TBSub.Position=UDim2.new(0,0,0.5,12)
+    TBSub.BackgroundTransparency=1
+    TBSub.BorderSizePixel=0
+    TBSub.Text="GUI"
+    TBSub.TextSize=8
+    TBSub.Font=Enum.Font.GothamBold
+    TBSub.TextColor3=Color3.new(T.Accent.R*0.6,T.Accent.G*0.6,T.Accent.B*0.6)
+    TBSub.TextXAlignment=Enum.TextXAlignment.Center
+    TBSub.ZIndex=201
+
+    -- Glow effect strip kiri
+    local TBGlow=Instance.new("Frame",ToggleBtn)
+    TBGlow.Size=UDim2.new(0,3,0.7,0)
+    TBGlow.Position=UDim2.new(1,-3,0.15,0)
+    TBGlow.BackgroundColor3=T.Accent
+    TBGlow.BackgroundTransparency=0.4
+    TBGlow.BorderSizePixel=0
+    TBGlow.ZIndex=201
+    Cor(TBGlow,2)
+
+    -- State & Logic
+    local guiVisible=true
+    local function updateToggleBtn()
+        if guiVisible then
+            TBIcon.Text="◀"
+            TBStr.Transparency=0.4
+            TBGlow.BackgroundTransparency=0.4
+        else
+            TBIcon.Text="▶"
+            TBStr.Transparency=0.1
+            TBStr.Color=T.AccentHov
+            TBGlow.BackgroundTransparency=0.1
+        end
+    end
+
+    OnClick(ToggleBtn,function()
+        guiVisible=not guiVisible
+        if guiVisible then
+            -- Tampilkan window
+            Win.Visible=true
+            Tw(Win,{BackgroundTransparency=0},0.2)
+            Tw(ToggleBtn,{Position=UDim2.new(0.5,-280-34,0.5,-40)},0.2,Enum.EasingStyle.Back,Enum.EasingDirection.Out)
+        else
+            -- Sembunyikan window
+            Tw(Win,{BackgroundTransparency=1},0.18)
+            task.delay(0.2,function() Win.Visible=false end)
+            Tw(ToggleBtn,{Position=UDim2.new(0,0,0.5,-40)},0.2,Enum.EasingStyle.Back,Enum.EasingDirection.Out)
+        end
+        updateToggleBtn()
+    end)
+
+    -- Hover effect
+    ToggleBtn.MouseEnter:Connect(function()
+        Tw(ToggleBtn,{BackgroundColor3=Color3.fromRGB(16,16,28)},0.12)
+        TBStr.Transparency=0
+    end)
+    ToggleBtn.MouseLeave:Connect(function()
+        Tw(ToggleBtn,{BackgroundColor3=Color3.fromRGB(10,10,18)},0.12)
+        TBStr.Transparency= guiVisible and 0.4 or 0.1
+    end)
+
+    -- Sinkronkan posisi toggle button saat window di-drag
+    Win:GetPropertyChangedSignal("Position"):Connect(function()
+        local wp=Win.Position
+        ToggleBtn.Position=UDim2.new(
+            wp.X.Scale, wp.X.Offset-34,
+            wp.Y.Scale, wp.Y.Offset+(340/2)-40
+        )
+    end)
 
     -- Body
     local Body=Instance.new("Frame",Win)
