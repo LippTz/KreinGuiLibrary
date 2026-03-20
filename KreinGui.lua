@@ -604,7 +604,15 @@ function KreinGui:CreateWindow(cfg)
     Cor(TBGlow, 2)
 
     -- State & Logic
+    local lastWrapperPos = Wrapper.Position  -- posisi default, diupdate saat loading selesai
     local guiVisible = true
+
+    -- Update lastWrapperPos setiap kali Wrapper di-drag
+    Wrapper:GetPropertyChangedSignal("Position"):Connect(function()
+        if guiVisible then
+            lastWrapperPos = Wrapper.Position
+        end
+    end)
 
     local function updateToggleBtn()
         if guiVisible then
@@ -619,16 +627,29 @@ function KreinGui:CreateWindow(cfg)
         end
     end
 
+    -- Simpan posisi Wrapper terakhir saat GUI visible
+    -- agar bisa dikembalikan saat GUI di-show lagi
+    local lastWrapperPos = Wrapper.Position
+
     OnClick(ToggleBtn, function()
         guiVisible = not guiVisible
         if guiVisible then
-            -- Tampilkan: Win muncul kembali
+            -- Kembalikan Wrapper ke posisi semula (sebelum di-hide)
+            Wrapper.Position = UDim2.new(lastWrapperPos.X.Scale, lastWrapperPos.X.Offset, lastWrapperPos.Y.Scale, lastWrapperPos.Y.Offset)
             Win.Visible = true
             Tw(Win, {BackgroundTransparency=0}, 0.2)
+            -- Animasi slide dari kiri ke posisi asli
+            Tw(Wrapper, {Position=UDim2.new(lastWrapperPos.X.Scale, lastWrapperPos.X.Offset, lastWrapperPos.Y.Scale, lastWrapperPos.Y.Offset)}, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
         else
-            -- Sembunyikan: Win fade out
+            -- Simpan posisi sekarang sebelum pindah
+            lastWrapperPos = Wrapper.Position
+            -- Fade out window
             Tw(Win, {BackgroundTransparency=1}, 0.18)
             task.delay(0.2, function() Win.Visible = false end)
+            -- Geser Wrapper ke pojok kiri layar
+            -- Tombol tetap kelihatan di pojok kiri, window hilang
+            local currentY = Wrapper.Position.Y
+            Tw(Wrapper, {Position=UDim2.new(0, -4, currentY.Scale, currentY.Offset)}, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
         end
         updateToggleBtn()
     end)
@@ -1153,6 +1174,10 @@ function KreinGui:CreateWindow(cfg)
             Enum.EasingStyle.Back, Enum.EasingDirection.Out)
         Tw(Win, {BackgroundTransparency=0}, 0.4)
         syncToggleBtnY(340)
+        -- Simpan posisi awal sebagai lastWrapperPos
+        task.delay(0.41, function()
+            lastWrapperPos = Wrapper.Position
+        end)
     end)
 
     return W
