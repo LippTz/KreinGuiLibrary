@@ -631,39 +631,39 @@ function KreinGui:CreateWindow(cfg)
 
     OnClick(ToggleBtn, function()
         guiVisible = not guiVisible
+        -- Tinggi Win saat ini: 52 kalau minimize, 340 kalau normal
+        local winH = mini and 52 or 340
+        local wrapH = mini and 52 or 340
+
         if guiVisible then
-            -- ── SHOW: Buka ke kanan seperti pintu terbuka ──
-            -- Win mulai dari lebar 0 (tertutup penuh di kiri)
-            -- lalu expand ke kanan sampai lebar penuh 560
-            -- AnchorPoint kanan = posisi kanan Win tetap, kiri yang bergerak
+            -- ── SHOW: Buka ke kanan, respek state minimize ──
             Win.Visible = true
             Win.BackgroundTransparency = 0
-            Win.Size = UDim2.new(0, 0, 0, 340)
-            Win.Position = UDim2.new(0, 32, 0, 0)  -- dari kiri Wrapper
-            -- Kembalikan Wrapper ke posisi asli dulu (instant, Win masih lebar 0)
+            -- Mulai dari lebar 0, tinggi sesuai state (52 atau 340)
+            Win.Size = UDim2.new(0, 0, 0, winH)
+            Win.Position = UDim2.new(0, 32, 0, 0)
+            -- Kembalikan Wrapper ke posisi asli (instant, Win masih lebar 0)
             Wrapper.Position = UDim2.new(
                 lastWrapperPos.X.Scale, lastWrapperPos.X.Offset,
                 lastWrapperPos.Y.Scale, lastWrapperPos.Y.Offset
             )
-            -- Expand Win ke kanan: lebar 0 → 560
-            Tw(Win, {Size = UDim2.new(0, 560, 0, 340)},
+            -- Expand ke kanan sampai lebar penuh, tinggi tetap sesuai state
+            Tw(Win, {Size = UDim2.new(0, 560, 0, winH)},
                 0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
         else
-            -- ── HIDE: Nutup ke kiri seperti pintu menutup ──
-            -- Win shrink dari kanan ke kiri: lebar 560 → 0
+            -- ── HIDE: Nutup ke kiri, respek state minimize ──
             lastWrapperPos = Wrapper.Position
             local currentY = Wrapper.Position.Y
-            -- Reset posisi Win dulu ke normal
-            Win.Size = UDim2.new(0, 560, 0, 340)
+            -- Pastikan ukuran Win sesuai state sebelum animasi
+            Win.Size = UDim2.new(0, 560, 0, winH)
             Win.Position = UDim2.new(0, 32, 0, 0)
-            -- Shrink ke kiri: lebar 560 → 0
-            Tw(Win, {Size = UDim2.new(0, 0, 0, 340)},
+            -- Shrink ke kiri, tinggi tetap (tidak berubah)
+            Tw(Win, {Size = UDim2.new(0, 0, 0, winH)},
                 0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
-            -- Setelah animasi selesai, sembunyikan dan geser tombol ke kiri
             task.delay(0.35, function()
                 Win.Visible = false
-                -- Kembalikan ukuran Win supaya siap di-show lagi
-                Win.Size = UDim2.new(0, 560, 0, 340)
+                -- Restore ukuran supaya siap dipakai lagi
+                Win.Size = UDim2.new(0, 560, 0, winH)
             end)
             -- Tombol geser ke pojok kiri layar
             Tw(Wrapper, {
