@@ -1,10 +1,11 @@
 --[[
-    KreinGui v5.1 – GUI Library by @uniquadev
+    KreinGui v5.2 – GUI Library by @uniquadev
     Fixes:
-    - Auto destroy previous GUI instance (no double GUI)
-    - Fixed nil 'Position' errors on slider/dropdown
-    - All methods (CreateDropdown, etc.) are available
-    - Better cleanup on re-run
+    - Minimize button text changes (- / +)
+    - Close button shows proper ✕ character
+    - Toggle button saves window size/position before hide
+    - Resize updates saved size so show restores correctly
+    - No blinking or size reset after hide/show
 --]]
 
 -- ============================================================
@@ -446,7 +447,7 @@ end
 -- CREATE WINDOW (dengan auto destroy previous GUI)
 -- ============================================================
 function KreinGui:CreateWindow(cfg)
-    -- Hapus GUI sebelumnya jika ada (seperti Rayfield)
+    -- Hapus GUI sebelumnya jika ada
     if currentGui and currentGui.Parent then
         destroyAllConnections()
         currentGui:Destroy()
@@ -462,9 +463,8 @@ function KreinGui:CreateWindow(cfg)
     SG.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
     SG.ResetOnSpawn=false
     SG.IgnoreGuiInset=true
-    currentGui = SG  -- simpan referensi untuk destroy berikutnya
+    currentGui = SG
 
-    -- Cleanup koneksi saat GUI dihancurkan
     SG.AncestryChanged:Connect(function()
         if not SG.Parent then
             destroyAllConnections()
@@ -542,21 +542,29 @@ function KreinGui:CreateWindow(cfg)
         SL.Position=UDim2.new(0,52,0,28); SL.Font=T.FontFace; SL.TextSize=11
     end
 
-    -- Close
-    local Cb=Instance.new("TextButton",H)
-    Cb.Size=UDim2.new(0,32,0,32); Cb.Position=UDim2.new(1,-40,0.5,-16)
-    Cb.BackgroundColor3=Color3.fromRGB(60,35,35); Cb.BorderSizePixel=0
-    Cb.Text="✕"; Cb.TextSize=13; Cb.Font=T.FontBold
-    Cb.TextColor3=T.CloseRed; Cb.ZIndex=6; Cb.AutoButtonColor=false
+    -- CLOSE BUTTON (fix karakter)
+    local Cb = Instance.new("TextButton", H)
+    Cb.Size = UDim2.new(0,32,0,32); Cb.Position = UDim2.new(1,-40,0.5,-16)
+    Cb.BackgroundColor3 = Color3.fromRGB(60,35,35); Cb.BorderSizePixel = 0
+    Cb.Text = "\u{2715}"  -- Unicode multiplication sign (✕)
+    Cb.TextSize = 14
+    Cb.Font = T.FontBold
+    Cb.TextColor3 = T.CloseRed
+    Cb.ZIndex = 6
+    Cb.AutoButtonColor = false
     Cor(Cb,7)
-    OnClick(Cb,function() SG:Destroy() end)
+    OnClick(Cb, function() SG:Destroy() end)
 
-    -- Minimize
-    local Mb=Instance.new("TextButton",H)
-    Mb.Size=UDim2.new(0,32,0,32); Mb.Position=UDim2.new(1,-78,0.5,-16)
-    Mb.BackgroundColor3=Color3.fromRGB(40,40,50); Mb.BorderSizePixel=0
-    Mb.Text="—"; Mb.TextSize=13; Mb.Font=T.FontBold
-    Mb.TextColor3=T.MinGray; Mb.ZIndex=6; Mb.AutoButtonColor=false
+    -- MINIMIZE BUTTON (teks berubah - / +)
+    local Mb = Instance.new("TextButton", H)
+    Mb.Size = UDim2.new(0,32,0,32); Mb.Position = UDim2.new(1,-78,0.5,-16)
+    Mb.BackgroundColor3 = Color3.fromRGB(40,40,50); Mb.BorderSizePixel = 0
+    Mb.Text = "−"  -- karakter minus
+    Mb.TextSize = 16
+    Mb.Font = T.FontBold
+    Mb.TextColor3 = T.MinGray
+    Mb.ZIndex = 6
+    Mb.AutoButtonColor = false
     Cor(Mb,7)
 
     local function syncToggleBtnY(h)
@@ -565,33 +573,40 @@ function KreinGui:CreateWindow(cfg)
         end
     end
 
-    local mini=false
-    OnClick(Mb,function()
-        mini=not mini
+    local mini = false
+    OnClick(Mb, function()
+        mini = not mini
         if mini then
-            Tw(Win,    {Size=UDim2.new(0,560,0,52)},   0.3)
-            Tw(Wrapper,{Size=UDim2.new(0,560+32,0,52)},0.3)
-            task.delay(0.2,function()
-                ABar.Visible=false
-                local gl=Win:FindFirstChild("ABarGlow")
-                if gl then gl.Visible=false end
+            Mb.Text = "+"   -- berubah jadi plus saat minimize
+            Tw(Win, {Size = UDim2.new(0,560,0,52)}, 0.3)
+            Tw(Wrapper, {Size = UDim2.new(0,560+32,0,52)}, 0.3)
+            task.delay(0.2, function()
+                ABar.Visible = false
+                local gl = Win:FindFirstChild("ABarGlow")
+                if gl then gl.Visible = false end
                 syncToggleBtnY(52)
+                -- Update saved size agar hide/show konsisten
+                lastWrapperSize = Wrapper.Size
+                lastWinSize = Win.Size
             end)
         else
-            ABar.Visible=true
-            local gl=Win:FindFirstChild("ABarGlow")
-            if gl then gl.Visible=true end
-            Tw(Win,    {Size=UDim2.new(0,560,0,340)},   0.4, Enum.EasingStyle.Back)
-            Tw(Wrapper,{Size=UDim2.new(0,560+32,0,340)},0.4, Enum.EasingStyle.Back)
-            task.delay(0.35,function()
+            Mb.Text = "−"   -- kembali ke minus
+            ABar.Visible = true
+            local gl = Win:FindFirstChild("ABarGlow")
+            if gl then gl.Visible = true end
+            Tw(Win, {Size = UDim2.new(0,560,0,340)}, 0.4, Enum.EasingStyle.Back)
+            Tw(Wrapper, {Size = UDim2.new(0,560+32,0,340)}, 0.4, Enum.EasingStyle.Back)
+            task.delay(0.35, function()
                 syncToggleBtnY(340)
+                lastWrapperSize = Wrapper.Size
+                lastWinSize = Win.Size
             end)
         end
     end)
 
-    EnableDrag(Wrapper,H)
+    EnableDrag(Wrapper, H)
 
-    -- TOGGLE BUTTON
+    -- TOGGLE BUTTON (sembunyikan GUI) dengan penyimpanan ukuran
     local ToggleBtn = Instance.new("TextButton", Wrapper)
     ToggleBtn.Name = "KreinToggleBtn"
     ToggleBtn.Size = UDim2.new(0, 28, 0, 80)
@@ -642,8 +657,12 @@ function KreinGui:CreateWindow(cfg)
     TBGlow.BorderSizePixel = 0
     Cor(TBGlow, 2)
 
-    local lastWrapperPos = Wrapper.Position
+    -- Variabel untuk menyimpan ukuran dan posisi saat hide
     local guiVisible = true
+    local lastWrapperSize = Wrapper.Size
+    local lastWinSize = Win.Size
+    local lastWrapperPos = Wrapper.Position
+
     Wrapper:GetPropertyChangedSignal("Position"):Connect(function()
         if guiVisible then lastWrapperPos = Wrapper.Position end
     end)
@@ -663,21 +682,28 @@ function KreinGui:CreateWindow(cfg)
 
     OnClick(ToggleBtn, function()
         guiVisible = not guiVisible
-        local winH = mini and 52 or 340
+        local currentWinH = Win.Size.Y.Offset
         if guiVisible then
+            -- Tampilkan GUI dengan ukuran terakhir yang disimpan
             Win.Visible = true
             Win.BackgroundTransparency = 0
-            Win.Size = UDim2.new(0, 0, 0, winH)
+            Win.Size = UDim2.new(0, 0, 0, currentWinH)
             Win.Position = UDim2.new(0, 32, 0, 0)
             Wrapper.Position = lastWrapperPos
-            Tw(Win, {Size = UDim2.new(0, 560, 0, winH)}, 0.4)
+            Tw(Win, {Size = lastWinSize}, 0.4)
+            Wrapper.Size = lastWrapperSize
+            syncToggleBtnY(lastWinSize.Y.Offset)
         else
+            -- Sembunyikan GUI: simpan ukuran dan posisi saat ini
+            lastWrapperSize = Wrapper.Size
+            lastWinSize = Win.Size
             lastWrapperPos = Wrapper.Position
             local currentY = Wrapper.Position.Y
-            Win.Size = UDim2.new(0, 560, 0, winH)
-            Win.Position = UDim2.new(0, 32, 0, 0)
-            Tw(Win, {Size = UDim2.new(0, 0, 0, winH)}, 0.35)
-            task.delay(0.35, function() Win.Visible = false; Win.Size = UDim2.new(0, 560, 0, winH) end)
+            Tw(Win, {Size = UDim2.new(0, 0, 0, currentWinH)}, 0.35)
+            task.delay(0.35, function()
+                Win.Visible = false
+                Win.Size = lastWinSize
+            end)
             Tw(Wrapper, {Position = UDim2.new(0, -4, currentY.Scale, currentY.Offset)}, 0.35)
         end
         updateToggleBtn()
@@ -742,7 +768,7 @@ function KreinGui:CreateWindow(cfg)
     ContentContainer.Position = UDim2.new(0,0,0,32)
     ContentContainer.BackgroundTransparency = 1
 
-    -- Resize grip
+    -- RESIZE GRIP (dengan update lastWrapperSize & lastWinSize)
     local ResizeGrip = Instance.new("TextButton", Win)
     ResizeGrip.Size = UDim2.new(0, 12, 0, 12)
     ResizeGrip.Position = UDim2.new(1, -14, 1, -14)
@@ -769,6 +795,9 @@ function KreinGui:CreateWindow(cfg)
             Wrapper.Size = UDim2.new(0, newW, 0, newH)
             Win.Size = UDim2.new(0, newW - 32, 0, newH)
             syncToggleBtnY(newH)
+            -- Simpan ukuran terbaru agar hide/show tidak kembali ke default
+            lastWrapperSize = Wrapper.Size
+            lastWinSize = Win.Size
         end
     end)
     UserInput.InputEnded:Connect(function(i)
@@ -904,7 +933,7 @@ function KreinGui:CreateWindow(cfg)
     end
 
     -- ============================================================
-    -- CREATE TAB (semua method sudah termasuk CreateDropdown)
+    -- CREATE TAB (semua method termasuk CreateDropdown)
     -- ============================================================
     function W:CreateTab(name)
         local idx=#tBtns+1
@@ -1197,7 +1226,7 @@ function KreinGui:CreateWindow(cfg)
             return api
         end
 
-        -- CREATE DROPDOWN (Single Select) - Method ini wajib ada
+        -- CREATE DROPDOWN (Single Select)
         function Tab:CreateDropdown(cfg2)
             cfg2 = cfg2 or {}
             local opts = cfg2.Options or {}
