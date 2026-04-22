@@ -1,22 +1,10 @@
 --[[
-    KreinGui v5.0 – GUI Library by @uniquadev
-    Fitur lengkap:
-    - Memory leak cleanup (semua koneksi didisconnect)
-    - Drag conflict (toggleable saat interaksi elemen)
-    - Dropdown posisi overflow (cek batas kanan)
-    - Config save error detail
-    - Slider UX lebih presisi
-    - Multi-select dropdown
-    - Slider dengan input number
-    - Notification queue
-    - Tooltip / Hover hint
-    - Color picker dengan Eyedropper
-    - Search bar untuk flags
-    - Export/Import config via clipboard
-    - Resizable window
-    - Hot reload theme
-    - Custom font support
-    - Code quality: fungsi terpecah, Tween completion
+    KreinGui v5.1 – GUI Library by @uniquadev
+    Fixes:
+    - Auto destroy previous GUI instance (no double GUI)
+    - Fixed nil 'Position' errors on slider/dropdown
+    - All methods (CreateDropdown, etc.) are available
+    - Better cleanup on re-run
 --]]
 
 -- ============================================================
@@ -31,12 +19,28 @@ local LocalPlayer  = Players.LocalPlayer
 local Mouse        = LocalPlayer:GetMouse()
 
 -- ============================================================
--- GLOBAL CONNECTIONS CLEANUP
+-- GLOBAL CLEANUP (for re-running script)
 -- ============================================================
 local activeConnections = {}
+local snakeConnections = {}
+local currentGui = nil
+
 local function addConnection(conn)
     table.insert(activeConnections, conn)
     return conn
+end
+
+local function destroyAllConnections()
+    for _, conn in ipairs(activeConnections) do
+        pcall(function() conn:Disconnect() end)
+    end
+    for _, data in ipairs(snakeConnections) do
+        pcall(function() data[1]:Disconnect() end)
+        pcall(function() if data[2] then data[2]:Destroy() end end)
+        pcall(function() if data[3] then data[3]:Destroy() end end)
+    end
+    activeConnections = {}
+    snakeConnections = {}
 end
 
 -- ============================================================
@@ -141,7 +145,6 @@ local function Lbl(par,txt,sz,col,xa,font)
     return l
 end
 
--- DRAG dengan flag untuk disable saat interaksi elemen
 local dragEnabled = true
 local function EnableDrag(f,h)
     h=h or f
@@ -243,7 +246,6 @@ end
 -- ============================================================
 -- SNAKE ANIMATION (dengan cleanup)
 -- ============================================================
-local snakeConnections = {}
 local function StartSnake(abar, accent, win)
     local Glow = Instance.new("Frame", abar.Parent)
     Glow.Name = "ABarGlow"
@@ -284,7 +286,7 @@ local function StartSnake(abar, accent, win)
 end
 
 -- ============================================================
--- LOADING SCREEN (dengan cleanup)
+-- LOADING SCREEN
 -- ============================================================
 local function ShowLoading(SG, accent, title, onDone)
     local Overlay = Instance.new("Frame", SG)
@@ -441,9 +443,15 @@ function KreinGui:UsePreset(name)
 end
 
 -- ============================================================
--- CREATE WINDOW (dengan resizable, hot reload, dll)
+-- CREATE WINDOW (dengan auto destroy previous GUI)
 -- ============================================================
 function KreinGui:CreateWindow(cfg)
+    -- Hapus GUI sebelumnya jika ada (seperti Rayfield)
+    if currentGui and currentGui.Parent then
+        destroyAllConnections()
+        currentGui:Destroy()
+    end
+    
     cfg = cfg or {}
     local title   = cfg.Title      or "KreinGui"
     local sub     = cfg.SubTitle   or ""
@@ -454,18 +462,13 @@ function KreinGui:CreateWindow(cfg)
     SG.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
     SG.ResetOnSpawn=false
     SG.IgnoreGuiInset=true
+    currentGui = SG  -- simpan referensi untuk destroy berikutnya
 
-    -- Cleanup semua koneksi saat SG dihancurkan
+    -- Cleanup koneksi saat GUI dihancurkan
     SG.AncestryChanged:Connect(function()
         if not SG.Parent then
-            for _, conn in ipairs(activeConnections) do
-                pcall(function() conn:Disconnect() end)
-            end
-            for _, data in ipairs(snakeConnections) do
-                pcall(function() data[1]:Disconnect() end)
-                pcall(function() data[2]:Destroy() end)
-                pcall(function() data[3]:Destroy() end)
-            end
+            destroyAllConnections()
+            if currentGui == SG then currentGui = nil end
         end
     end)
 
@@ -557,7 +560,9 @@ function KreinGui:CreateWindow(cfg)
     Cor(Mb,7)
 
     local function syncToggleBtnY(h)
-        ToggleBtn.Position = UDim2.new(0, 0, 0, h/2 - 40)
+        if ToggleBtn then
+            ToggleBtn.Position = UDim2.new(0, 0, 0, h/2 - 40)
+        end
     end
 
     local mini=false
@@ -732,13 +737,12 @@ function KreinGui:CreateWindow(cfg)
     Cor(SearchBox, 4)
     Str(SearchBox, T.ElementStr, 1)
 
-    -- Content container (akan diisi tab frames)
     local ContentContainer = Instance.new("Frame", CP)
     ContentContainer.Size = UDim2.new(1,0,1,-32)
     ContentContainer.Position = UDim2.new(0,0,0,32)
     ContentContainer.BackgroundTransparency = 1
 
-    -- Resize grip (pojok kanan bawah)
+    -- Resize grip
     local ResizeGrip = Instance.new("TextButton", Win)
     ResizeGrip.Size = UDim2.new(0, 12, 0, 12)
     ResizeGrip.Position = UDim2.new(1, -14, 1, -14)
@@ -793,7 +797,6 @@ function KreinGui:CreateWindow(cfg)
                 f.Size=UDim2.new(0,0,0,0)
             end
         end
-        -- Reset search box saat ganti tab
         SearchBox.Text = ""
         for _, api in pairs(KreinGui.Flags) do
             if api._element then
@@ -822,7 +825,7 @@ function KreinGui:CreateWindow(cfg)
     function W:LoadConfig()
         local ok,raw=pcall(readfile,cfgName..".json")
         if not ok or not raw then Notify(SG,"Config not found.",2); return end
-        local ok2,d=pccall(HttpService.JSONDecode,HttpService,raw)
+        local ok2,d=pcall(HttpService.JSONDecode,HttpService,raw)
         if not ok2 or not d then Notify(SG,"Config corrupted.",2); return end
         for k,val in pairs(d) do
             if flags[k] then
@@ -874,9 +877,7 @@ function KreinGui:CreateWindow(cfg)
 
     function W:Notify(msg,dur) Notify(SG,msg,dur) end
 
-    -- Hot reload theme
     function W:ReloadTheme()
-        -- Update warna semua elemen statis (yang mudah diakses)
         Win.BackgroundColor3 = T.WindowBG
         H.BackgroundColor3 = T.HeaderBG
         TP.BackgroundColor3 = T.TabBG
@@ -899,14 +900,11 @@ function KreinGui:CreateWindow(cfg)
             local bar = btn:FindFirstChild("B")
             if bar then bar.BackgroundColor3 = T.AccentHov end
         end
-        -- Untuk elemen dinamis, kita loop flags dan update API internal?
-        -- Bisa juga simpan referensi elemen, tapi untuk sederhana, kita reload UI? Tidak praktis.
-        -- Kita beri notifikasi bahwa reload selesai (perubahan warna sebagian).
-        Notify(SG,"Theme reloaded (some elements need recreation)",2)
+        Notify(SG,"Theme reloaded (partial)",2)
     end
 
     -- ============================================================
-    -- CREATE TAB (dengan tooltip, search filter)
+    -- CREATE TAB (semua method sudah termasuk CreateDropdown)
     -- ============================================================
     function W:CreateTab(name)
         local idx=#tBtns+1
@@ -929,7 +927,6 @@ function KreinGui:CreateWindow(cfg)
         Btn.MouseLeave:Connect(function() if tActive~=idx then Tw(Btn,{BackgroundColor3=T.TabDef},0.15) end end)
         tBtns[idx]=Btn
 
-        -- Content ScrollingFrame (dengan search filtering nanti)
         local Con=Instance.new("ScrollingFrame",ContentContainer)
         Con.Name="C"..idx
         Con.BackgroundTransparency=1; Con.BorderSizePixel=0
@@ -946,7 +943,7 @@ function KreinGui:CreateWindow(cfg)
         tFrms[idx]=Con
         if idx==1 then setTab(1) end
 
-        -- Search filter: sembunyikan elemen yang tidak mengandung teks flag
+        -- Search filter
         SearchBox.Changed:Connect(function()
             if tActive ~= idx then return end
             local query = SearchBox.Text:lower()
@@ -981,14 +978,13 @@ function KreinGui:CreateWindow(cfg)
             return c
         end
 
-        -- Helper tooltip
         local function addTooltip(element, text)
             if not text then return end
             element.MouseEnter:Connect(function() ShowTooltip(text, element) end)
             element.MouseLeave:Connect(function() HideTooltip() end)
         end
 
-        -- CREATE ELEMENTS (dengan tooltip)
+        -- SEMUA METHOD (termasuk CreateDropdown)
         function Tab:CreateLabel(txt, hint)
             local c=Card(36); Pad(c,0,0,12,12)
             local l=Lbl(c,txt,UDim2.new(1,0,1,0),T.TextSec)
@@ -1010,7 +1006,7 @@ function KreinGui:CreateWindow(cfg)
             return l
         end
 
-        function Tab:AddSeparator() 
+        function Tab:AddSeparator()
             local s=Instance.new("Frame",Con)
             s.Size=UDim2.new(1,0,0,1); s.BackgroundColor3=T.Sep
             s.BorderSizePixel=0; s.LayoutOrder=nxt()
@@ -1095,10 +1091,14 @@ function KreinGui:CreateWindow(cfg)
             SB.BackgroundTransparency=1; SB.BorderSizePixel=0; SB.Text=""; SB.ZIndex=4
             local slid=false; local api={}
             local function upd(x)
-                local r=math.clamp((x-TBG.AbsolutePosition.X)/TBG.AbsoluteSize.X,0,1)
-                val=math.floor(mn+r*(mx-mn)+0.5); local p=(val-mn)/(mx-mn)
-                TF.Size=UDim2.new(p,0,1,0); Kn.Position=UDim2.new(p,-10,0.5,-10); vl.Text=tostring(val)
-                pcall(cfg2.Callback or function()end,val)
+                if not TBG or not TBG.AbsolutePosition then return end
+                local r = math.clamp((x - TBG.AbsolutePosition.X) / TBG.AbsoluteSize.X, 0, 1)
+                val = math.floor(mn + r * (mx - mn) + 0.5)
+                local p = (val - mn) / (mx - mn)
+                TF.Size = UDim2.new(p, 0, 1, 0)
+                Kn.Position = UDim2.new(p, -10, 0.5, -10)
+                vl.Text = tostring(val)
+                pcall(cfg2.Callback or function()end, val)
             end
             function api:Set(v) val=math.clamp(v,mn,mx); local p=(val-mn)/(mx-mn); TF.Size=UDim2.new(p,0,1,0); Kn.Position=UDim2.new(p,-10,0.5,-10); vl.Text=tostring(val); pcall(cfg2.Callback or function()end,val) end
             function api:Get() return val end
@@ -1110,7 +1110,6 @@ function KreinGui:CreateWindow(cfg)
             return api
         end
 
-        -- Slider dengan input number
         function Tab:CreateSliderNumber(cfg2)
             cfg2=cfg2 or {}
             local mn=cfg2.Min or 0; local mx=cfg2.Max or 100
@@ -1154,8 +1153,9 @@ function KreinGui:CreateWindow(cfg)
                 pcall(cfg2.Callback or function()end, val)
             end
             local function upd(x)
-                local r=math.clamp((x-TBG.AbsolutePosition.X)/TBG.AbsoluteSize.X,0,1)
-                updateVal(math.floor(mn+r*(mx-mn)+0.5))
+                if not TBG or not TBG.AbsolutePosition then return end
+                local r = math.clamp((x - TBG.AbsolutePosition.X) / TBG.AbsoluteSize.X, 0, 1)
+                updateVal(math.floor(mn + r*(mx-mn) + 0.5))
             end
             function api:Set(v) updateVal(v) end
             function api:Get() return val end
@@ -1193,6 +1193,130 @@ function KreinGui:CreateWindow(cfg)
             TB.FocusLost:Connect(function(e) is.Color=T.ElementStr; if e then pcall(cfg2.Callback or function()end,TB.Text) end end)
             local api={}; function api:Set(v) TB.Text=tostring(v) end; function api:Get() return TB.Text end
             rfl(cfg2.Flag,api,c)
+            if cfg2.Hint then addTooltip(c, cfg2.Hint) end
+            return api
+        end
+
+        -- CREATE DROPDOWN (Single Select) - Method ini wajib ada
+        function Tab:CreateDropdown(cfg2)
+            cfg2 = cfg2 or {}
+            local opts = cfg2.Options or {}
+            local sel = cfg2.Default or (opts[1] or "")
+            local open = false
+            local c = Card(44); Pad(c,0,0,12,12)
+            Lbl(c, cfg2.Title or "Dropdown", UDim2.new(1,-100,1,0)).TextSize = 13
+
+            local SF = Instance.new("Frame", c)
+            SF.Size = UDim2.new(0,90,0,28); SF.Position = UDim2.new(1,-90,0.5,-14)
+            SF.BackgroundColor3 = T.WindowBG; SF.BorderSizePixel = 0; Cor(SF,6); Str(SF,T.ElementStr,1)
+            local SL = Lbl(SF, sel, UDim2.new(1,-18,1,0), T.TextPri); SL.Position = UDim2.new(0,6,0,0); SL.Font = T.FontFace; SL.TextSize = 11
+            local Arr = Lbl(SF, "▼", UDim2.new(0,14,1,0), T.TextMut, Enum.TextXAlignment.Center); Arr.Position = UDim2.new(1,-16,0,0); Arr.TextSize = 12
+
+            local DF = Instance.new("Frame", SG)
+            DF.Size = UDim2.new(0,100,0,0)
+            DF.BackgroundColor3 = T.ElementBG
+            DF.BorderSizePixel = 0
+            DF.ClipsDescendants = true
+            DF.Visible = false
+            DF.ZIndex = 160
+            Cor(DF,6); Str(DF,T.ElementStr,1)
+
+            local DSF = Instance.new("ScrollingFrame", DF)
+            DSF.Size = UDim2.new(1,0,1,0)
+            DSF.BackgroundTransparency = 1
+            DSF.BorderSizePixel = 0
+            DSF.ScrollBarThickness = 3
+            DSF.ScrollBarImageColor3 = T.Accent
+            DSF.CanvasSize = UDim2.new(0,0,0,0)
+            DSF.AutomaticCanvasSize = Enum.AutomaticSize.Y
+            DSF.ClipsDescendants = true
+            DSF.ZIndex = 161
+            Pad(DSF,4,4,4,4)
+
+            local DL = Instance.new("UIListLayout", DSF)
+            DL.SortOrder = Enum.SortOrder.LayoutOrder
+            DL.Padding = UDim.new(0,2)
+
+            local oH = 32
+            local MAX_H = 200
+
+            for i, opt in ipairs(opts) do
+                local ob = Instance.new("TextButton", DSF)
+                ob.Size = UDim2.new(1,0,0,oH-2)
+                ob.BackgroundColor3 = T.ElementBG
+                ob.BorderSizePixel = 0
+                ob.Text = opt
+                ob.TextSize = 12
+                ob.Font = T.FontFace
+                ob.TextColor3 = T.TextSec
+                ob.TextXAlignment = Enum.TextXAlignment.Left
+                ob.AutoButtonColor = false
+                ob.ZIndex = 162
+                ob.LayoutOrder = i
+                Cor(ob,4); Pad(ob,0,0,8,0)
+                ob.MouseEnter:Connect(function() Tw(ob,{BackgroundColor3=T.TabHov},0.12) end)
+                ob.MouseLeave:Connect(function() Tw(ob,{BackgroundColor3=T.ElementBG},0.12) end)
+                OnClick(ob, function()
+                    sel = opt
+                    SL.Text = opt
+                    pcall(cfg2.Callback or function()end, sel)
+                    closeDD()
+                end)
+            end
+
+            local contentH = #opts * oH + 8
+            local dispH = math.min(contentH, MAX_H)
+            DSF.ScrollBarThickness = contentH > MAX_H and 3 or 0
+
+            local function closeDD()
+                if not open then return end; open = false
+                Tw(DF, {Size = UDim2.new(0, DF.Size.X.Offset, 0, 0)}, 0.18)
+                Arr.Text = "▼"
+                task.delay(0.2, function() DF.Visible = false end)
+            end
+
+            local function openDD()
+                local ap = SF.AbsolutePosition
+                local as = SF.AbsoluteSize
+                local w = math.max(as.X+10, 100)
+                local vp = workspace.CurrentCamera.ViewportSize
+                local x = math.min(ap.X, vp.X - w - 4)
+                local spaceBelow = vp.Y - (ap.Y + as.Y + 4)
+                local spaceAbove = ap.Y - 4
+                local posY = (spaceBelow >= dispH or spaceBelow >= spaceAbove) and (ap.Y + as.Y + 4) or (ap.Y - dispH - 4)
+                DF.Position = UDim2.new(0, x, 0, posY)
+                DF.Size = UDim2.new(0, w, 0, 0)
+                DF.Visible = true; open = true
+                Tw(DF, {Size = UDim2.new(0, w, 0, dispH)}, 0.22)
+                Arr.Text = "▲"
+            end
+
+            local TB2 = Instance.new("TextButton", c)
+            TB2.Size = UDim2.new(1,0,1,0); TB2.BackgroundTransparency = 1; TB2.BorderSizePixel = 0; TB2.Text = ""; TB2.AutoButtonColor = false
+            OnClick(TB2, function() if open then closeDD() else openDD() end end)
+            TB2.MouseEnter:Connect(function() Tw(c,{BackgroundColor3=T.ElementHov},0.15) end)
+            TB2.MouseLeave:Connect(function() Tw(c,{BackgroundColor3=T.ElementBG},0.15) end)
+
+            UserInput.InputBegan:Connect(function(i)
+                if not open or not isDown(i) then return end
+                task.defer(function()
+                    if not open then return end
+                    local pos = i.Position
+                    local dp = DF.AbsolutePosition
+                    local ds = DF.AbsoluteSize
+                    local cp2 = c.AbsolutePosition
+                    local cs = c.AbsoluteSize
+                    if not (pos.X >= dp.X and pos.X <= dp.X+ds.X and pos.Y >= dp.Y and pos.Y <= dp.Y+ds.Y) and
+                       not (pos.X >= cp2.X and pos.X <= cp2.X+cs.X and pos.Y >= cp2.Y and pos.Y <= cp2.Y+cs.Y) then
+                        closeDD()
+                    end
+                end)
+            end)
+
+            local api = {}
+            function api:Set(v) sel = v; SL.Text = v; pcall(cfg2.Callback or function()end, v) end
+            function api:Get() return sel end
+            rfl(cfg2.Flag, api, c)
             if cfg2.Hint then addTooltip(c, cfg2.Hint) end
             return api
         end
@@ -1389,7 +1513,6 @@ function KreinGui:CreateWindow(cfg)
             return api
         end
 
-        -- Color Picker dengan Eyedropper (dipecah)
         function Tab:CreateColorPicker(cfg2)
             cfg2=cfg2 or {}
             local col=cfg2.Default or Color3.fromRGB(255,0,0)
