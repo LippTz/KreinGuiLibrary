@@ -1,7 +1,13 @@
 --[[
-    KreinGui v5.3 – GUI Library by @uniquadev (Stable)
-    - All file/clipboard functions protected with pcall
-    - No errors on executors without writefile/readfile support
+    KreinGui v5.3 Wave Edition – GUI Library by @uniquadev
+    Fitur lengkap:
+    - Wave animation pada header
+    - Semua tween super smooth (Cubic/Quad)
+    - Toggle, Slider, SliderNumber, TextBox, Dropdown, MultiDropdown
+    - InputNumber, ProgressBar, ColorPicker, Keybind
+    - Tooltip, Search bar, Resize, Minimize, Hide/Show
+    - Save/Load config, Export/Import clipboard
+    - Auto destroy previous GUI
 --]]
 
 -- ============================================================
@@ -112,16 +118,12 @@ local Presets = {
 }
 
 -- ============================================================
--- UI HELPERS
+-- UI HELPERS (with smooth tweens)
 -- ============================================================
-local function Tween(obj, props, duration, style, dir)
-    local t = TweenService:Create(obj, TweenInfo.new(duration or 0.2, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out), props)
+local function SmoothTween(obj, props, duration, style, dir)
+    local t = TweenService:Create(obj, TweenInfo.new(duration or 0.2, style or Enum.EasingStyle.Cubic, dir or Enum.EasingDirection.Out), props)
     t:Play()
     return t
-end
-
-local function SmoothTween(obj, props, duration, style, dir)
-    return Tween(obj, props, duration or 0.25, style or Enum.EasingStyle.Cubic, dir or Enum.EasingDirection.Out)
 end
 
 local function Corner(frame, radius)
@@ -159,10 +161,6 @@ local function Label(parent, text, size, color, alignX, font)
     l.TextWrapped = true
     return l
 end
-
-local function HSV(h, s, v) return Color3.fromHSV(h, s, v) end
-local function ToHSV(c) return Color3.toHSV(c) end
-local function ToHex(c) return string.format("%02X%02X%02X", math.floor(c.R * 255), math.floor(c.G * 255), math.floor(c.B * 255)) end
 
 -- ============================================================
 -- NOTIFICATION QUEUE
@@ -381,7 +379,7 @@ function KreinGui:UsePreset(name)
 end
 
 -- ============================================================
--- CREATE WINDOW
+-- CREATE WINDOW (dengan auto destroy previous GUI)
 -- ============================================================
 function KreinGui:CreateWindow(cfg)
     if currentGui and currentGui.Parent then
@@ -423,7 +421,7 @@ function KreinGui:CreateWindow(cfg)
     Win.BorderSizePixel = 0
     Win.ClipsDescendants = true
     Corner(Win, 16)
-    Stroke(Win, Theme.Accent, 1.2)
+    Stroke(Win, Theme.StrokeColor, 1)
 
     local Header = Instance.new("Frame", Win)
     Header.Size = UDim2.new(1, 0, 0, 56)
@@ -777,35 +775,23 @@ function KreinGui:CreateWindow(cfg)
                 data[k] = v
             end
         end
-        local success, err = pcall(function()
-            writefile(cfgName .. ".json", HttpService:JSONEncode(data))
-        end)
-        if success then
-            self:Notify("Config saved", 2)
-        else
-            self:Notify("Save failed: " .. tostring(err), 2)
-        end
+        local ok, err = pcall(function() writefile(cfgName .. ".json", HttpService:JSONEncode(data)) end)
+        self:Notify(ok and "Config saved" or "Save failed: " .. tostring(err), 2)
     end
 
     function Window:LoadConfig()
-        local success, raw = pcall(readfile, cfgName .. ".json")
-        if not success or not raw then
-            self:Notify("No config found", 2)
-            return
-        end
-        local success2, data = pcall(HttpService.JSONDecode, HttpService, raw)
-        if not success2 or not data then
-            self:Notify("Corrupted config", 2)
-            return
-        end
+        local ok, raw = pcall(readfile, cfgName .. ".json")
+        if not ok or not raw then self:Notify("No config found", 2) return end
+        local ok2, data = pcall(HttpService.JSONDecode, HttpService, raw)
+        if not ok2 then self:Notify("Corrupted config", 2) return end
         for k, val in pairs(data) do
             if flags[k] then
                 if type(val) == "table" and val.__t == "Color3" then
                     flags[k]:Set(Color3.new(val.r, val.g, val.b))
                 elseif type(val) == "table" and val.__t == "Enum" then
                     local parts = string.split(val.v, ".")
-                    local ok, en = pcall(function() return Enum[parts[2]][parts[3]] end)
-                    if ok then flags[k]:Set(en) end
+                    local success, en = pcall(function() return Enum[parts[2]][parts[3]] end)
+                    if success then flags[k]:Set(en) end
                 else
                     flags[k]:Set(val)
                 end
@@ -828,40 +814,26 @@ function KreinGui:CreateWindow(cfg)
         end
         local json = HttpService:JSONEncode(data)
         if setclipboard then
-            local success, err = pcall(setclipboard, json)
-            if success then
-                self:Notify("Copied to clipboard", 2)
-            else
-                self:Notify("Clipboard error: " .. tostring(err), 2)
-            end
+            setclipboard(json)
+            self:Notify("Copied to clipboard", 2)
         else
             self:Notify("Clipboard not supported", 2)
         end
     end
 
     function Window:ImportFromClipboard()
-        if not getclipboard then
-            self:Notify("Clipboard not supported", 2)
-            return
-        end
-        local success, raw = pcall(getclipboard)
-        if not success or not raw then
-            self:Notify("Clipboard error", 2)
-            return
-        end
+        if not getclipboard then self:Notify("Clipboard not supported", 2) return end
+        local raw = getclipboard()
         local ok, data = pcall(HttpService.JSONDecode, HttpService, raw)
-        if not ok then
-            self:Notify("Invalid clipboard data", 2)
-            return
-        end
+        if not ok then self:Notify("Invalid clipboard data", 2) return end
         for k, val in pairs(data) do
             if flags[k] then
                 if type(val) == "table" and val.__t == "Color3" then
                     flags[k]:Set(Color3.new(val.r, val.g, val.b))
                 elseif type(val) == "table" and val.__t == "Enum" then
                     local parts = string.split(val.v, ".")
-                    local ok2, en = pcall(function() return Enum[parts[2]][parts[3]] end)
-                    if ok2 then flags[k]:Set(en) end
+                    local success, en = pcall(function() return Enum[parts[2]][parts[3]] end)
+                    if success then flags[k]:Set(en) end
                 else
                     flags[k]:Set(val)
                 end
@@ -921,10 +893,10 @@ function KreinGui:CreateWindow(cfg)
 
         OnClick(btn, function() setActiveTab(idx) end)
         btn.MouseEnter:Connect(function()
-            if activeTab ~= idx then SmoothTween(btn, { BackgroundColor3 = Theme.TabHover }, 0.08)
+            if activeTab ~= idx then SmoothTween(btn, { BackgroundColor3 = Theme.TabHover }, 0.08) end
         end)
         btn.MouseLeave:Connect(function()
-            if activeTab ~= idx then SmoothTween(btn, { BackgroundColor3 = Theme.TabInactive }, 0.08)
+            if activeTab ~= idx then SmoothTween(btn, { BackgroundColor3 = Theme.TabInactive }, 0.08) end
         end)
         tabButtons[idx] = btn
 
@@ -976,9 +948,7 @@ function KreinGui:CreateWindow(cfg)
             elem.MouseLeave:Connect(function() HideTooltip() end)
         end
 
-        -- ====================================================================
-        -- ELEMENT CREATION METHODS
-        -- ====================================================================
+        -- ========== ELEMENT METHODS ==========
         function Tab:CreateLabel(text, hint)
             local c = Card(38)
             Padding(c, 0, 0, 14, 14)
@@ -1256,10 +1226,9 @@ function KreinGui:CreateWindow(cfg)
             local api = {}
             function api:Set(v) box.Text = tostring(v) end
             function api:Get() return box.Text end
-            box.Focused:Connect(function() stroke.Color = Theme.Accent; SmoothTween(inputFrame, { BackgroundColor3 = Theme.WindowBG }, 0.1) end)
+            box.Focused:Connect(function() stroke.Color = Theme.Accent end)
             box.FocusLost:Connect(function(enter)
                 stroke.Color = Theme.ElementStroke
-                SmoothTween(inputFrame, { BackgroundColor3 = Theme.WindowBG }, 0.1)
                 if enter then pcall(cfg.Callback or function() end, box.Text) end
             end)
             registerFlag(cfg.Flag, api, c)
@@ -1678,77 +1647,71 @@ function KreinGui:CreateWindow(cfg)
             swatch.BorderSizePixel = 0
             Corner(swatch, 8)
             Stroke(swatch, Theme.ElementStroke, 1)
-            local pickerFrame = nil
             local api = {}
             function api:Set(nc) col = nc; swatch.BackgroundColor3 = nc; pcall(cfg.Callback or function() end, nc) end
             function api:Get() return col end
             OnClick(swatch, function()
-                if pickerFrame then pickerFrame:Destroy() end
-                pickerFrame = Instance.new("Frame", SG)
-                pickerFrame.Size = UDim2.new(0, 220, 0, 190)
-                pickerFrame.Position = UDim2.new(0.5, -110, 0.5, -95)
-                pickerFrame.BackgroundColor3 = Theme.ElementBG
-                pickerFrame.BackgroundTransparency = 0.05
-                pickerFrame.BorderSizePixel = 0
-                pickerFrame.ZIndex = 300
-                Corner(pickerFrame, 12)
-                Stroke(pickerFrame, Theme.Accent, 1)
+                local picker = Instance.new("Frame", SG)
+                picker.Size = UDim2.new(0, 220, 0, 190)
+                picker.Position = UDim2.new(0.5, -110, 0.5, -95)
+                picker.BackgroundColor3 = Theme.ElementBG
+                picker.BackgroundTransparency = 0.05
+                picker.BorderSizePixel = 0
+                picker.ZIndex = 300
+                Corner(picker, 12)
+                Stroke(picker, Theme.Accent, 1)
 
-                local redSlider = Instance.new("Frame", pickerFrame)
-                redSlider.Size = UDim2.new(0.8, 0, 0, 14)
-                redSlider.Position = UDim2.new(0.1, 0, 0.2, 0)
-                redSlider.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-                Corner(redSlider, 4)
-                local redFill = Instance.new("Frame", redSlider)
+                local red = Instance.new("Frame", picker)
+                red.Size = UDim2.new(0.8, 0, 0, 14)
+                red.Position = UDim2.new(0.1, 0, 0.2, 0)
+                red.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+                Corner(red, 4)
+                local redFill = Instance.new("Frame", red)
                 redFill.Size = UDim2.new(r, 0, 1, 0)
                 redFill.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
-                redFill.BorderSizePixel = 0
                 Corner(redFill, 4)
-                local greenSlider = Instance.new("Frame", pickerFrame)
-                greenSlider.Size = UDim2.new(0.8, 0, 0, 14)
-                greenSlider.Position = UDim2.new(0.1, 0, 0.4, 0)
-                greenSlider.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-                Corner(greenSlider, 4)
-                local greenFill = Instance.new("Frame", greenSlider)
+                local green = Instance.new("Frame", picker)
+                green.Size = UDim2.new(0.8, 0, 0, 14)
+                green.Position = UDim2.new(0.1, 0, 0.4, 0)
+                green.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+                Corner(green, 4)
+                local greenFill = Instance.new("Frame", green)
                 greenFill.Size = UDim2.new(g, 0, 1, 0)
                 greenFill.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
-                greenFill.BorderSizePixel = 0
                 Corner(greenFill, 4)
-                local blueSlider = Instance.new("Frame", pickerFrame)
-                blueSlider.Size = UDim2.new(0.8, 0, 0, 14)
-                blueSlider.Position = UDim2.new(0.1, 0, 0.6, 0)
-                blueSlider.BackgroundColor3 = Color3.fromRGB(0, 0, 255)
-                Corner(blueSlider, 4)
-                local blueFill = Instance.new("Frame", blueSlider)
+                local blue = Instance.new("Frame", picker)
+                blue.Size = UDim2.new(0.8, 0, 0, 14)
+                blue.Position = UDim2.new(0.1, 0, 0.6, 0)
+                blue.BackgroundColor3 = Color3.fromRGB(0, 0, 255)
+                Corner(blue, 4)
+                local blueFill = Instance.new("Frame", blue)
                 blueFill.Size = UDim2.new(b, 0, 1, 0)
                 blueFill.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
-                blueFill.BorderSizePixel = 0
                 Corner(blueFill, 4)
-                local preview = Instance.new("Frame", pickerFrame)
+                local preview = Instance.new("Frame", picker)
                 preview.Size = UDim2.new(0.8, 0, 0, 28)
                 preview.Position = UDim2.new(0.1, 0, 0.78, 0)
                 preview.BackgroundColor3 = col
-                preview.BorderSizePixel = 0
                 Corner(preview, 8)
                 Stroke(preview, Theme.ElementStroke, 1)
-                local okBtn = Instance.new("TextButton", pickerFrame)
-                okBtn.Size = UDim2.new(0.35, 0, 0, 28)
-                okBtn.Position = UDim2.new(0.55, 0, 0.88, 0)
-                okBtn.Text = "OK"
-                okBtn.BackgroundColor3 = Theme.Accent
-                okBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-                okBtn.Font = Theme.FontBold
-                Corner(okBtn, 8)
-                local cancelBtn = Instance.new("TextButton", pickerFrame)
-                cancelBtn.Size = UDim2.new(0.35, 0, 0, 28)
-                cancelBtn.Position = UDim2.new(0.1, 0, 0.88, 0)
-                cancelBtn.Text = "Cancel"
-                cancelBtn.BackgroundColor3 = Theme.ElementHov
-                cancelBtn.TextColor3 = Theme.TextPrimary
-                cancelBtn.Font = Theme.FontMain
-                Corner(cancelBtn, 8)
+                local ok = Instance.new("TextButton", picker)
+                ok.Size = UDim2.new(0.35, 0, 0, 28)
+                ok.Position = UDim2.new(0.55, 0, 0.88, 0)
+                ok.Text = "OK"
+                ok.BackgroundColor3 = Theme.Accent
+                ok.TextColor3 = Color3.fromRGB(255, 255, 255)
+                ok.Font = Theme.FontBold
+                Corner(ok, 8)
+                local cancel = Instance.new("TextButton", picker)
+                cancel.Size = UDim2.new(0.35, 0, 0, 28)
+                cancel.Position = UDim2.new(0.1, 0, 0.88, 0)
+                cancel.Text = "Cancel"
+                cancel.BackgroundColor3 = Theme.ElementHov
+                cancel.TextColor3 = Theme.TextPrimary
+                cancel.Font = Theme.FontMain
+                Corner(cancel, 8)
 
-                local function updateColor()
+                local function update()
                     local nc = Color3.new(r, g, b)
                     preview.BackgroundColor3 = nc
                     swatch.BackgroundColor3 = nc
@@ -1758,36 +1721,37 @@ function KreinGui:CreateWindow(cfg)
                 end
 
                 local function startDrag(slider, channel)
-                    local dragging = false
+                    local drag = false
                     slider.InputBegan:Connect(function(i)
                         if isDown(i) then
-                            dragging = true
+                            drag = true
                             local x = math.clamp((i.Position.X - slider.AbsolutePosition.X) / slider.AbsoluteSize.X, 0, 1)
                             if channel == "r" then r = x elseif channel == "g" then g = x else b = x end
-                            updateColor()
+                            update()
                         end
                     end)
                     UserInput.InputChanged:Connect(function(i)
-                        if dragging and isMove(i) then
+                        if drag and isMove(i) then
                             local x = math.clamp((i.Position.X - slider.AbsolutePosition.X) / slider.AbsoluteSize.X, 0, 1)
                             if channel == "r" then r = x elseif channel == "g" then g = x else b = x end
-                            updateColor()
+                            update()
                         end
                     end)
                     UserInput.InputEnded:Connect(function(i)
-                        if isDown(i) then dragging = false end
+                        if isDown(i) then drag = false end
                     end)
                 end
-                startDrag(redSlider, "r")
-                startDrag(greenSlider, "g")
-                startDrag(blueSlider, "b")
-                OnClick(okBtn, function()
+                startDrag(red, "r")
+                startDrag(green, "g")
+                startDrag(blue, "b")
+
+                OnClick(ok, function()
                     col = Color3.new(r, g, b)
                     swatch.BackgroundColor3 = col
                     pcall(cfg.Callback or function() end, col)
-                    pickerFrame:Destroy()
+                    picker:Destroy()
                 end)
-                OnClick(cancelBtn, function() pickerFrame:Destroy() end)
+                OnClick(cancel, function() picker:Destroy() end)
             end)
             registerFlag(cfg.Flag, api, c)
             if cfg.Hint then addHint(c, cfg.Hint) end
