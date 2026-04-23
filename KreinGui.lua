@@ -1,9 +1,10 @@
 --[[
-    KreinGui v5.2 – GUI Library by @uniquadev
-    Fixes:
-    - Close button shows "X" (regular character)
-    - Minimize button disables resize when minimized, re-enables when restored
+    KreinGui v5.2 – GUI Library by @uniquadev (Glass Edition)
+    Fitur:
+    - Background window transparan (opacity 0.6)
+    - Efek blur menggunakan image texture (glassmorphism)
     - Minimize button text changes (- / +)
+    - Close button shows "X"
     - Toggle button saves window size/position before hide
     - Resize updates saved size so show restores correctly
     - No blinking or size reset after hide/show
@@ -445,7 +446,7 @@ function KreinGui:UsePreset(name)
 end
 
 -- ============================================================
--- CREATE WINDOW (dengan auto destroy previous GUI)
+-- CREATE WINDOW (dengan auto destroy previous GUI & glass effect)
 -- ============================================================
 function KreinGui:CreateWindow(cfg)
     -- Hapus GUI sebelumnya jika ada
@@ -485,21 +486,39 @@ function KreinGui:CreateWindow(cfg)
     Win.Name="Window"
     Win.Size=UDim2.new(0,560,0,340)
     Win.Position=UDim2.new(0,32,0,0)
-    Win.BackgroundColor3=T.WindowBG
-    Win.BorderSizePixel=0
-    Win.ClipsDescendants=true
-    Cor(Win,12); Str(Win,T.WinStr,1)
-    local g=Instance.new("UIGradient",Win)
-    g.Color=ColorSequence.new(Color3.fromRGB(18,28,40),Color3.fromRGB(8,14,22))
-    g.Rotation=135
+    Win.BackgroundColor3 = T.WindowBG
+    Win.BackgroundTransparency = 0.6   -- transparan 60%
+    Win.BorderSizePixel = 0
+    Win.ClipsDescendants = true
+    Cor(Win,12)
+    Str(Win,T.WinStr,1)
 
-    Win.BackgroundTransparency = 1
-    Win.Visible = false
+    -- === EFEK BLUR (glassmorphism) ===
+    local BlurOverlay = Instance.new("ImageLabel", Win)
+    BlurOverlay.Size = UDim2.new(1,0,1,0)
+    BlurOverlay.BackgroundTransparency = 1
+    BlurOverlay.Image = "rbxasset://textures/ui/Blur_Effect.png"
+    BlurOverlay.ImageColor3 = Color3.fromRGB(255,255,255)
+    BlurOverlay.ImageTransparency = 0.5
+    BlurOverlay.ScaleType = Enum.ScaleType.Slice
+    BlurOverlay.SliceCenter = Rect.new(0,0,0,0)
+    BlurOverlay.ZIndex = 0
 
-    -- Header
+    -- Gradasi hitam tipis untuk mempertegas efek glass
+    local Gradient = Instance.new("Frame", Win)
+    Gradient.Size = UDim2.new(1,0,1,0)
+    Gradient.BackgroundColor3 = Color3.fromRGB(0,0,0)
+    Gradient.BackgroundTransparency = 0.3
+    Gradient.BorderSizePixel = 0
+    Gradient.ZIndex = 1
+    Cor(Gradient,12)
+
+    -- Header (sedikit transparan)
     local H=Instance.new("Frame",Win)
     H.Name="Header"; H.Size=UDim2.new(1,0,0,52)
-    H.BackgroundColor3=T.HeaderBG; H.BorderSizePixel=0; H.ZIndex=4
+    H.BackgroundColor3 = T.HeaderBG
+    H.BackgroundTransparency = 0.85
+    H.BorderSizePixel=0; H.ZIndex=4
     Cor(H,12)
 
     local ABar=Instance.new("Frame",Win)
@@ -543,7 +562,7 @@ function KreinGui:CreateWindow(cfg)
         SL.Position=UDim2.new(0,52,0,28); SL.Font=T.FontFace; SL.TextSize=11
     end
 
-    -- CLOSE BUTTON (pakai "X" biasa)
+    -- CLOSE BUTTON
     local Cb = Instance.new("TextButton", H)
     Cb.Size = UDim2.new(0,32,0,32); Cb.Position = UDim2.new(1,-40,0.5,-16)
     Cb.BackgroundColor3 = Color3.fromRGB(60,35,35); Cb.BorderSizePixel = 0
@@ -556,11 +575,11 @@ function KreinGui:CreateWindow(cfg)
     Cor(Cb,7)
     OnClick(Cb, function() SG:Destroy() end)
 
-    -- MINIMIZE BUTTON (teks berubah - / +)
+    -- MINIMIZE BUTTON
     local Mb = Instance.new("TextButton", H)
     Mb.Size = UDim2.new(0,32,0,32); Mb.Position = UDim2.new(1,-78,0.5,-16)
     Mb.BackgroundColor3 = Color3.fromRGB(40,40,50); Mb.BorderSizePixel = 0
-    Mb.Text = "−"  -- karakter minus
+    Mb.Text = "−"
     Mb.TextSize = 16
     Mb.Font = T.FontBold
     Mb.TextColor3 = T.MinGray
@@ -575,12 +594,12 @@ function KreinGui:CreateWindow(cfg)
     end
 
     local mini = false
-    local resizeEnabled = true  -- flag untuk mengaktifkan/menonaktifkan resize
+    local resizeEnabled = true
     OnClick(Mb, function()
         mini = not mini
         if mini then
-            Mb.Text = "+"   -- berubah jadi plus saat minimize
-            resizeEnabled = false  -- disable resize
+            Mb.Text = "+"
+            resizeEnabled = false
             Tw(Win, {Size = UDim2.new(0,560,0,52)}, 0.3)
             Tw(Wrapper, {Size = UDim2.new(0,560+32,0,52)}, 0.3)
             task.delay(0.2, function()
@@ -588,13 +607,12 @@ function KreinGui:CreateWindow(cfg)
                 local gl = Win:FindFirstChild("ABarGlow")
                 if gl then gl.Visible = false end
                 syncToggleBtnY(52)
-                -- Update saved size agar hide/show konsisten
                 lastWrapperSize = Wrapper.Size
                 lastWinSize = Win.Size
             end)
         else
-            Mb.Text = "−"   -- kembali ke minus
-            resizeEnabled = true   -- enable resize kembali
+            Mb.Text = "−"
+            resizeEnabled = true
             ABar.Visible = true
             local gl = Win:FindFirstChild("ABarGlow")
             if gl then gl.Visible = true end
@@ -610,7 +628,7 @@ function KreinGui:CreateWindow(cfg)
 
     EnableDrag(Wrapper, H)
 
-    -- TOGGLE BUTTON (sembunyikan GUI) dengan penyimpanan ukuran
+    -- TOGGLE BUTTON (sembunyikan GUI)
     local ToggleBtn = Instance.new("TextButton", Wrapper)
     ToggleBtn.Name = "KreinToggleBtn"
     ToggleBtn.Size = UDim2.new(0, 28, 0, 80)
@@ -688,9 +706,8 @@ function KreinGui:CreateWindow(cfg)
         guiVisible = not guiVisible
         local currentWinH = Win.Size.Y.Offset
         if guiVisible then
-            -- Tampilkan GUI dengan ukuran terakhir yang disimpan
             Win.Visible = true
-            Win.BackgroundTransparency = 0
+            Win.BackgroundTransparency = 0.6   -- kembali ke transparansi
             Win.Size = UDim2.new(0, 0, 0, currentWinH)
             Win.Position = UDim2.new(0, 32, 0, 0)
             Wrapper.Position = lastWrapperPos
@@ -698,7 +715,6 @@ function KreinGui:CreateWindow(cfg)
             Wrapper.Size = lastWrapperSize
             syncToggleBtnY(lastWinSize.Y.Offset)
         else
-            -- Sembunyikan GUI: simpan ukuran dan posisi saat ini
             lastWrapperSize = Wrapper.Size
             lastWinSize = Win.Size
             lastWrapperPos = Wrapper.Position
@@ -729,7 +745,9 @@ function KreinGui:CreateWindow(cfg)
 
     local TW=130
     local TP=Instance.new("Frame",Body)
-    TP.Size=UDim2.new(0,TW,1,0); TP.BackgroundColor3=T.TabBG; TP.BorderSizePixel=0
+    TP.Size=UDim2.new(0,TW,1,0); TP.BackgroundColor3 = T.TabBG
+    TP.BackgroundTransparency = 0.5   -- transparan agar efek glass terlihat
+    TP.BorderSizePixel=0
     local SepL=Instance.new("Frame",Body)
     SepL.Size=UDim2.new(0,1,1,0); SepL.Position=UDim2.new(0,TW,0,0)
     SepL.BackgroundColor3=T.Sep
@@ -751,6 +769,7 @@ function KreinGui:CreateWindow(cfg)
     local SearchFrame = Instance.new("Frame", CP)
     SearchFrame.Size = UDim2.new(1,0,0,32)
     SearchFrame.BackgroundColor3 = T.ElementBG
+    SearchFrame.BackgroundTransparency = 0.7   -- transparan
     SearchFrame.BorderSizePixel = 0
     SearchFrame.ZIndex = 50
     Cor(SearchFrame, 6)
@@ -758,6 +777,7 @@ function KreinGui:CreateWindow(cfg)
     SearchBox.Size = UDim2.new(1,-16,0,24)
     SearchBox.Position = UDim2.new(0,8,0,4)
     SearchBox.BackgroundColor3 = T.WindowBG
+    SearchBox.BackgroundTransparency = 0.5
     SearchBox.BorderSizePixel = 0
     SearchBox.PlaceholderText = "🔍 Search flags..."
     SearchBox.TextColor3 = T.TextPri
@@ -772,7 +792,7 @@ function KreinGui:CreateWindow(cfg)
     ContentContainer.Position = UDim2.new(0,0,0,32)
     ContentContainer.BackgroundTransparency = 1
 
-    -- RESIZE GRIP (dengan pengecekan resizeEnabled)
+    -- RESIZE GRIP
     local ResizeGrip = Instance.new("TextButton", Win)
     ResizeGrip.Size = UDim2.new(0, 12, 0, 12)
     ResizeGrip.Position = UDim2.new(1, -14, 1, -14)
@@ -799,7 +819,6 @@ function KreinGui:CreateWindow(cfg)
             Wrapper.Size = UDim2.new(0, newW, 0, newH)
             Win.Size = UDim2.new(0, newW - 32, 0, newH)
             syncToggleBtnY(newH)
-            -- Simpan ukuran terbaru agar hide/show tidak kembali ke default
             lastWrapperSize = Wrapper.Size
             lastWinSize = Win.Size
         end
@@ -937,7 +956,7 @@ function KreinGui:CreateWindow(cfg)
     end
 
     -- ============================================================
-    -- CREATE TAB (semua method termasuk CreateDropdown)
+    -- CREATE TAB
     -- ============================================================
     function W:CreateTab(name)
         local idx=#tBtns+1
@@ -1006,6 +1025,7 @@ function KreinGui:CreateWindow(cfg)
         local function Card(h)
             local c=Instance.new("Frame",Con)
             c.Size=UDim2.new(1,0,0,h or 44); c.BackgroundColor3=T.ElementBG
+            c.BackgroundTransparency = 0.3   -- sedikit transparan
             c.BorderSizePixel=0; c.LayoutOrder=nxt(); c.ClipsDescendants=false
             Cor(c,8); Str(c,T.ElementStr,1)
             return c
@@ -1017,7 +1037,7 @@ function KreinGui:CreateWindow(cfg)
             element.MouseLeave:Connect(function() HideTooltip() end)
         end
 
-        -- SEMUA METHOD (termasuk CreateDropdown)
+        -- SEMUA METHOD (sama seperti sebelumnya, hanya background transparan)
         function Tab:CreateLabel(txt, hint)
             local c=Card(36); Pad(c,0,0,12,12)
             local l=Lbl(c,txt,UDim2.new(1,0,1,0),T.TextSec)
@@ -1230,7 +1250,6 @@ function KreinGui:CreateWindow(cfg)
             return api
         end
 
-        -- CREATE DROPDOWN (Single Select)
         function Tab:CreateDropdown(cfg2)
             cfg2 = cfg2 or {}
             local opts = cfg2.Options or {}
@@ -1354,7 +1373,6 @@ function KreinGui:CreateWindow(cfg)
             return api
         end
 
-        -- Multi-Select Dropdown
         function Tab:CreateMultiDropdown(cfg2)
             cfg2=cfg2 or {}
             local opts=cfg2.Options or {}
@@ -1677,11 +1695,11 @@ function KreinGui:CreateWindow(cfg)
     -- Loading screen
     ShowLoading(SG, T.Accent, title, function()
         Win.Visible = true
-        Win.BackgroundTransparency = 1
+        Win.BackgroundTransparency = 0.6   -- transparan
         Wrapper.Position = UDim2.new(0.5,-280-32,0.5,-130)
         Tw(Wrapper, {Position=UDim2.new(0.5,-280-32,0.5,-170)}, 0.55, Enum.EasingStyle.Back)
         task.delay(0.05, function()
-            Tw(Win, {BackgroundTransparency=0}, 0.45)
+            Tw(Win, {BackgroundTransparency=0.6}, 0.45)
         end)
         syncToggleBtnY(340)
         task.delay(0.6, function()
