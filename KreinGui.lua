@@ -1,13 +1,11 @@
 --[[
-    KreinGui v5.3 Wave Edition – GUI Library by @uniquadev
-    Fitur lengkap:
-    - Wave animation pada header
-    - Semua tween super smooth (Cubic/Quad)
-    - Toggle, Slider, SliderNumber, TextBox, Dropdown, MultiDropdown
-    - InputNumber, ProgressBar, ColorPicker, Keybind
-    - Tooltip, Search bar, Resize, Minimize, Hide/Show
-    - Save/Load config, Export/Import clipboard
-    - Auto destroy previous GUI
+    KreinGui v5.4 – Expert Animation Edition by @uniquadev
+    - Header shimmer + wave animation
+    - Elastic minimize/restore
+    - Spring-loaded toggle & slider
+    - Bouncy tooltips & dropdowns
+    - Smooth resize & hide/show
+    - All features from previous versions
 --]]
 
 -- ============================================================
@@ -76,7 +74,7 @@ local function OnClick(btn, fn)
 end
 
 -- ============================================================
--- THEME (Soft & Modern)
+-- THEME (Premium Dark)
 -- ============================================================
 local Theme = {
     WindowBG = Color3.fromRGB(18, 22, 28),
@@ -118,10 +116,26 @@ local Presets = {
 }
 
 -- ============================================================
--- UI HELPERS (with smooth tweens)
+-- EXPERT TWEEN HELPERS
 -- ============================================================
+local function ElasticTween(obj, props, duration, amplitude)
+    local info = TweenInfo.new(duration or 0.4, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out, 0, false, amplitude or 0.3)
+    local t = TweenService:Create(obj, info, props)
+    t:Play()
+    return t
+end
+
+local function SpringTween(obj, props, duration)
+    local info = TweenInfo.new(duration or 0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0.5)
+    local t = TweenService:Create(obj, info, props)
+    t:Play()
+    return t
+end
+
 local function SmoothTween(obj, props, duration, style, dir)
-    local t = TweenService:Create(obj, TweenInfo.new(duration or 0.2, style or Enum.EasingStyle.Cubic, dir or Enum.EasingDirection.Out), props)
+    local s = style or Enum.EasingStyle.Cubic
+    local d = dir or Enum.EasingDirection.Out
+    local t = TweenService:Create(obj, TweenInfo.new(duration or 0.2, s, d), props)
     t:Play()
     return t
 end
@@ -163,7 +177,7 @@ local function Label(parent, text, size, color, alignX, font)
 end
 
 -- ============================================================
--- NOTIFICATION QUEUE
+-- NOTIFICATION (with spring)
 -- ============================================================
 local notificationQueue = {}
 local notifActive = false
@@ -191,9 +205,12 @@ local function showNextNotification(SG)
     nl.Font = Theme.FontMain
     nl.TextSize = 12
     nl.TextWrapped = true
-    SmoothTween(N, { Position = UDim2.new(1, -290, 1, -64) }, 0.3)
+    N.Position = UDim2.new(1, 10, 1, -64)
+    N.BackgroundTransparency = 1
+    N.Size = UDim2.new(0, 0, 0, 48)
+    SmoothTween(N, { Position = UDim2.new(1, -290, 1, -64), BackgroundTransparency = 0.05, Size = UDim2.new(0, 280, 0, 48) }, 0.3)
     task.delay(data.dur or 3, function()
-        SmoothTween(N, { Position = UDim2.new(1, 10, 1, -64) }, 0.3)
+        SmoothTween(N, { Position = UDim2.new(1, 10, 1, -64), BackgroundTransparency = 1, Size = UDim2.new(0, 0, 0, 48) }, 0.3)
         task.delay(0.35, function()
             N:Destroy()
             notifActive = false
@@ -207,7 +224,7 @@ local function Notify(SG, msg, dur)
 end
 
 -- ============================================================
--- TOOLTIP SYSTEM
+-- TOOLTIP (bouncy)
 -- ============================================================
 local activeTooltip = nil
 local function ShowTooltip(text, parent)
@@ -215,7 +232,7 @@ local function ShowTooltip(text, parent)
     local tip = Instance.new("Frame", parent)
     tip.Size = UDim2.new(0, 0, 0, 28)
     tip.BackgroundColor3 = Theme.ElementBG
-    tip.BackgroundTransparency = 0.1
+    tip.BackgroundTransparency = 1
     tip.BorderSizePixel = 0
     tip.ZIndex = 200
     tip.Visible = false
@@ -233,7 +250,7 @@ local function ShowTooltip(text, parent)
     tip.Visible = true
     tip.BackgroundTransparency = 1
     tip.Size = UDim2.new(0, tip.Size.X.Offset, 0, 0)
-    SmoothTween(tip, { BackgroundTransparency = 0.1, Size = UDim2.new(0, tip.Size.X.Offset, 0, 28) }, 0.15)
+    SpringTween(tip, { BackgroundTransparency = 0.1, Size = UDim2.new(0, tip.Size.X.Offset, 0, 28) }, 0.2)
     activeTooltip = tip
     tip.Destroying:Connect(function()
         if activeTooltip == tip then activeTooltip = nil end
@@ -247,9 +264,9 @@ local function HideTooltip()
 end
 
 -- ============================================================
--- WAVE ANIMATION (Header)
+-- HEADER ANIMATION: WAVE + SHIMMER
 -- ============================================================
-local function StartWaveAnimation(abar, accent)
+local function StartHeaderAnimation(abar, accent)
     local BaseLine = Instance.new("Frame", abar)
     BaseLine.Size = UDim2.new(1, 0, 1, 0)
     BaseLine.BackgroundColor3 = accent
@@ -273,12 +290,28 @@ local function StartWaveAnimation(abar, accent)
     })
     grad.Color = ColorSequence.new(accent, Color3.fromRGB(255, 255, 255))
 
+    local Shimmer = Instance.new("Frame", abar)
+    Shimmer.Size = UDim2.new(0.1, 0, 1, 0)
+    Shimmer.BackgroundTransparency = 1
+    Shimmer.BorderSizePixel = 0
+    Shimmer.ZIndex = 5
+    local shimmerGrad = Instance.new("UIGradient", Shimmer)
+    shimmerGrad.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(0.4, 0.5),
+        NumberSequenceKeypoint.new(0.5, 0),
+        NumberSequenceKeypoint.new(0.6, 0.5),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    shimmerGrad.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 255, 255))
+
     local t = 0
     local conn
     conn = RunService.Heartbeat:Connect(function(dt)
         if not abar or not abar.Parent then conn:Disconnect(); return end
-        t = (t + dt * 0.4) % 1
+        t = (t + dt * 0.6) % 1
         Wave.Position = UDim2.new(t - 0.4, 0, 0, 0)
+        Shimmer.Position = UDim2.new(t - 0.05, 0, 0, 0)
     end)
     addConnection(conn)
     table.insert(waveConnections, conn)
@@ -303,6 +336,9 @@ local function ShowLoading(SG, accent, title, onDone)
     Box.BorderSizePixel = 0
     Corner(Box, 16)
     Stroke(Box, accent, 1.5)
+    Box.BackgroundTransparency = 1
+    Box.Size = UDim2.new(0, 0, 0, 140)
+    SpringTween(Box, { BackgroundTransparency = 0.05, Size = UDim2.new(0, 320, 0, 140) }, 0.4)
 
     local TitleLbl = Label(Box, title, UDim2.new(1, 0, 0, 38), accent)
     TitleLbl.Position = UDim2.new(0, 0, 0, 20)
@@ -338,7 +374,6 @@ local function ShowLoading(SG, accent, title, onDone)
     }
 
     task.spawn(function()
-        Box.BackgroundTransparency = 0.05
         for _, step in ipairs(steps) do
             SubLbl.Text = step.txt
             SmoothTween(BarFill, { Size = UDim2.new(step.pct, 0, 1, 0) }, 0.22)
@@ -379,7 +414,7 @@ function KreinGui:UsePreset(name)
 end
 
 -- ============================================================
--- CREATE WINDOW (dengan auto destroy previous GUI)
+-- CREATE WINDOW (EXPERT ANIMATIONS)
 -- ============================================================
 function KreinGui:CreateWindow(cfg)
     if currentGui and currentGui.Parent then
@@ -422,6 +457,9 @@ function KreinGui:CreateWindow(cfg)
     Win.ClipsDescendants = true
     Corner(Win, 16)
     Stroke(Win, Theme.StrokeColor, 1)
+    Win.BackgroundTransparency = 1
+    Win.Size = UDim2.new(0, 0, 0, 380)
+    SpringTween(Win, { BackgroundTransparency = 0.08, Size = UDim2.new(0, 560, 0, 380) }, 0.5)
 
     local Header = Instance.new("Frame", Win)
     Header.Size = UDim2.new(1, 0, 0, 56)
@@ -436,7 +474,7 @@ function KreinGui:CreateWindow(cfg)
     ABar.BackgroundColor3 = Theme.Accent
     ABar.BackgroundTransparency = 0
     ABar.BorderSizePixel = 0
-    StartWaveAnimation(ABar, Theme.Accent)
+    StartHeaderAnimation(ABar, Theme.Accent)
 
     local LogoBg = Instance.new("Frame", Header)
     LogoBg.Size = UDim2.new(0, 36, 0, 36)
@@ -598,7 +636,7 @@ function KreinGui:CreateWindow(cfg)
     local lastWrapperPos = Wrapper.Position
 
     local function syncToggleBtnY(h)
-        ToggleBtn.Position = UDim2.new(0, 0, 0, h / 2 - 40)
+        SmoothTween(ToggleBtn, { Position = UDim2.new(0, 0, 0, h / 2 - 40) }, 0.15)
     end
 
     local function updateToggleIcon()
@@ -613,14 +651,13 @@ function KreinGui:CreateWindow(cfg)
 
     local function toggleGui()
         guiVisible = not guiVisible
-        local curH = Win.Size.Y.Offset
         if guiVisible then
             Win.Visible = true
             Win.BackgroundTransparency = 0.08
-            Win.Size = UDim2.new(0, 0, 0, curH)
+            Win.Size = UDim2.new(0, 0, 0, lastWinSize.Y.Offset)
             Win.Position = UDim2.new(0, 32, 0, 0)
             Wrapper.Position = lastWrapperPos
-            SmoothTween(Win, { Size = lastWinSize }, 0.4)
+            SpringTween(Win, { Size = lastWinSize }, 0.4)
             Wrapper.Size = lastWrapperSize
             syncToggleBtnY(lastWinSize.Y.Offset)
         else
@@ -628,12 +665,12 @@ function KreinGui:CreateWindow(cfg)
             lastWinSize = Win.Size
             lastWrapperPos = Wrapper.Position
             local curY = Wrapper.Position.Y
-            SmoothTween(Win, { Size = UDim2.new(0, 0, 0, curH) }, 0.35)
-            task.delay(0.35, function()
+            SmoothTween(Win, { Size = UDim2.new(0, 0, 0, Win.Size.Y.Offset) }, 0.3)
+            task.delay(0.3, function()
                 Win.Visible = false
                 Win.Size = lastWinSize
             end)
-            SmoothTween(Wrapper, { Position = UDim2.new(0, -4, curY.Scale, curY.Offset) }, 0.35)
+            SmoothTween(Wrapper, { Position = UDim2.new(0, -4, curY.Scale, curY.Offset) }, 0.3)
         end
         updateToggleIcon()
     end
@@ -645,9 +682,9 @@ function KreinGui:CreateWindow(cfg)
         if isMinimized then
             MinBtn.Text = "+"
             resizeEnabled = false
-            SmoothTween(Win, { Size = UDim2.new(0, 560, 0, 56) }, 0.3)
-            SmoothTween(Wrapper, { Size = UDim2.new(0, 592, 0, 56) }, 0.3)
-            task.delay(0.2, function()
+            ElasticTween(Win, { Size = UDim2.new(0, 560, 0, 56) }, 0.4, 0.2)
+            ElasticTween(Wrapper, { Size = UDim2.new(0, 592, 0, 56) }, 0.4, 0.2)
+            task.delay(0.3, function()
                 ABar.Visible = false
                 syncToggleBtnY(56)
                 lastWrapperSize = Wrapper.Size
@@ -657,9 +694,9 @@ function KreinGui:CreateWindow(cfg)
             MinBtn.Text = "−"
             resizeEnabled = true
             ABar.Visible = true
-            SmoothTween(Win, { Size = UDim2.new(0, 560, 0, 380) }, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-            SmoothTween(Wrapper, { Size = UDim2.new(0, 592, 0, 380) }, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-            task.delay(0.35, function()
+            ElasticTween(Win, { Size = UDim2.new(0, 560, 0, 380) }, 0.5, 0.25)
+            ElasticTween(Wrapper, { Size = UDim2.new(0, 592, 0, 380) }, 0.5, 0.25)
+            task.delay(0.4, function()
                 syncToggleBtnY(380)
                 lastWrapperSize = Wrapper.Size
                 lastWinSize = Win.Size
@@ -708,8 +745,8 @@ function KreinGui:CreateWindow(cfg)
             local delta = i.Position - resizeStart
             local newW = math.max(450, resizeStartSize.X.Offset + delta.X)
             local newH = math.max(250, resizeStartSize.Y.Offset + delta.Y)
-            SmoothTween(Wrapper, { Size = UDim2.new(0, newW, 0, newH) }, 0.15)
-            SmoothTween(Win, { Size = UDim2.new(0, newW - 32, 0, newH) }, 0.15)
+            SmoothTween(Wrapper, { Size = UDim2.new(0, newW, 0, newH) }, 0.12)
+            SmoothTween(Win, { Size = UDim2.new(0, newW - 32, 0, newH) }, 0.12)
             syncToggleBtnY(newH)
             lastWrapperSize = Wrapper.Size
             lastWinSize = Win.Size
@@ -737,7 +774,7 @@ function KreinGui:CreateWindow(cfg)
         for i, f in ipairs(tabFrames) do
             if i == idx then
                 f.Size = UDim2.new(0, 0, 0, 0)
-                SmoothTween(f, { Size = UDim2.new(1, 0, 1, 0) }, 0.25)
+                SmoothTween(f, { Size = UDim2.new(1, 0, 1, 0) }, 0.22)
             else
                 f.Size = UDim2.new(0, 0, 0, 0)
             end
@@ -948,7 +985,7 @@ function KreinGui:CreateWindow(cfg)
             elem.MouseLeave:Connect(function() HideTooltip() end)
         end
 
-        -- ========== ELEMENT METHODS ==========
+        -- ========== EXPERT ELEMENT METHODS ==========
         function Tab:CreateLabel(text, hint)
             local c = Card(38)
             Padding(c, 0, 0, 14, 14)
@@ -1003,12 +1040,12 @@ function KreinGui:CreateWindow(cfg)
             runBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
             Corner(runBtn, 8)
             OnClick(runBtn, function()
-                SmoothTween(runBtn, { BackgroundColor3 = Theme.AccentDark }, 0.1)
-                task.delay(0.15, function() SmoothTween(runBtn, { BackgroundColor3 = Theme.Accent }, 0.15) end)
+                SmoothTween(runBtn, { BackgroundColor3 = Theme.AccentDark }, 0.08)
+                task.delay(0.12, function() SpringTween(runBtn, { BackgroundColor3 = Theme.Accent }, 0.15) end)
                 pcall(cfg.Callback or function() end)
             end)
-            runBtn.MouseEnter:Connect(function() SmoothTween(runBtn, { BackgroundColor3 = Theme.AccentHover }, 0.08) end)
-            runBtn.MouseLeave:Connect(function() SmoothTween(runBtn, { BackgroundColor3 = Theme.Accent }, 0.08) end)
+            runBtn.MouseEnter:Connect(function() SmoothTween(runBtn, { BackgroundColor3 = Theme.AccentHover }, 0.08); SmoothTween(runBtn, { Size = UDim2.new(0, 72, 0, 34) }, 0.08) end)
+            runBtn.MouseLeave:Connect(function() SmoothTween(runBtn, { BackgroundColor3 = Theme.Accent }, 0.08); SmoothTween(runBtn, { Size = UDim2.new(0, 70, 0, 32) }, 0.08) end)
             local hov = Instance.new("TextButton", c)
             hov.Size = UDim2.new(1, 0, 1, 0)
             hov.BackgroundTransparency = 1
@@ -1043,7 +1080,7 @@ function KreinGui:CreateWindow(cfg)
             local api = {}
             local function update()
                 SmoothTween(track, { BackgroundColor3 = state and Theme.ToggleOn or Theme.ToggleOff }, 0.18)
-                SmoothTween(knob, { Position = state and UDim2.new(1, -22, 0.5, -10) or UDim2.new(0, 2, 0.5, -10) }, 0.18)
+                SpringTween(knob, { Position = state and UDim2.new(1, -22, 0.5, -10) or UDim2.new(0, 2, 0.5, -10) }, 0.22)
                 pcall(cfg.Callback or function() end, state)
             end
             function api:Set(v) state = v; update() end
@@ -1102,11 +1139,11 @@ function KreinGui:CreateWindow(cfg)
                 val = math.floor(min + r * (max - min) + 0.5)
                 local p = (val - min) / (max - min)
                 fill.Size = UDim2.new(p, 0, 1, 0)
-                SmoothTween(knob, { Position = UDim2.new(p, -10, 0.5, -10) }, 0.1)
+                SpringTween(knob, { Position = UDim2.new(p, -10, 0.5, -10) }, 0.18)
                 valLabel.Text = tostring(val)
                 pcall(cfg.Callback or function() end, val)
             end
-            function api:Set(v) val = math.clamp(v, min, max); local p = (val - min) / (max - min); fill.Size = UDim2.new(p, 0, 1, 0); SmoothTween(knob, { Position = UDim2.new(p, -10, 0.5, -10) }, 0.15); valLabel.Text = tostring(val); pcall(cfg.Callback or function() end, val) end
+            function api:Set(v) val = math.clamp(v, min, max); local p = (val - min) / (max - min); fill.Size = UDim2.new(p, 0, 1, 0); SpringTween(knob, { Position = UDim2.new(p, -10, 0.5, -10) }, 0.22); valLabel.Text = tostring(val); pcall(cfg.Callback or function() end, val) end
             function api:Get() return val end
             hit.InputBegan:Connect(function(i) if isDown(i) then dragging = true; updateValue(i.Position.X) end end)
             UserInput.InputChanged:Connect(function(i) if dragging and isMove(i) then updateValue(i.Position.X) end end)
@@ -1170,7 +1207,7 @@ function KreinGui:CreateWindow(cfg)
                 val = math.clamp(newVal, min, max)
                 local p = (val - min) / (max - min)
                 fill.Size = UDim2.new(p, 0, 1, 0)
-                SmoothTween(knob, { Position = UDim2.new(p, -10, 0.5, -10) }, 0.1)
+                SpringTween(knob, { Position = UDim2.new(p, -10, 0.5, -10) }, 0.18)
                 numBox.Text = tostring(val)
                 pcall(cfg.Callback or function() end, val)
             end
@@ -1226,9 +1263,10 @@ function KreinGui:CreateWindow(cfg)
             local api = {}
             function api:Set(v) box.Text = tostring(v) end
             function api:Get() return box.Text end
-            box.Focused:Connect(function() stroke.Color = Theme.Accent end)
+            box.Focused:Connect(function() stroke.Color = Theme.Accent; SmoothTween(inputFrame, { BackgroundColor3 = Theme.WindowBG }, 0.1) end)
             box.FocusLost:Connect(function(enter)
                 stroke.Color = Theme.ElementStroke
+                SmoothTween(inputFrame, { BackgroundColor3 = Theme.WindowBG }, 0.1)
                 if enter then pcall(cfg.Callback or function() end, box.Text) end
             end)
             registerFlag(cfg.Flag, api, c)
@@ -1329,7 +1367,7 @@ function KreinGui:CreateWindow(cfg)
                 popup.Size = UDim2.new(0, w, 0, 0)
                 popup.Visible = true
                 open = true
-                SmoothTween(popup, { Size = UDim2.new(0, w, 0, maxH) }, 0.22)
+                SpringTween(popup, { Size = UDim2.new(0, w, 0, maxH) }, 0.25)
                 arrow.Text = "▲"
             end
 
@@ -1443,7 +1481,7 @@ function KreinGui:CreateWindow(cfg)
                 lbl.TextSize = 12
                 OnClick(chk, function()
                     selected[opt] = not selected[opt]
-                    SmoothTween(chk, { BackgroundColor3 = selected[opt] and Theme.Accent or Theme.ToggleOff }, 0.1)
+                    SpringTween(chk, { BackgroundColor3 = selected[opt] and Theme.Accent or Theme.ToggleOff }, 0.12)
                     chk.Text = selected[opt] and "✓" or ""
                     updateText()
                 end)
@@ -1472,7 +1510,7 @@ function KreinGui:CreateWindow(cfg)
                 popup.Size = UDim2.new(0, w, 0, 0)
                 popup.Visible = true
                 open = true
-                SmoothTween(popup, { Size = UDim2.new(0, w, 0, maxH) }, 0.22)
+                SpringTween(popup, { Size = UDim2.new(0, w, 0, maxH) }, 0.25)
                 arrow.Text = "▲"
             end
 
@@ -1570,14 +1608,14 @@ function KreinGui:CreateWindow(cfg)
             OnClick(minus, function()
                 val = math.clamp(val - step, min, max)
                 update()
-                SmoothTween(minus, { BackgroundColor3 = Theme.AccentDark }, 0.1)
-                task.delay(0.15, function() SmoothTween(minus, { BackgroundColor3 = Theme.ElementHov }, 0.15) end)
+                SmoothTween(minus, { BackgroundColor3 = Theme.AccentDark }, 0.08)
+                task.delay(0.12, function() SpringTween(minus, { BackgroundColor3 = Theme.ElementHov }, 0.15) end)
             end)
             OnClick(plus, function()
                 val = math.clamp(val + step, min, max)
                 update()
-                SmoothTween(plus, { BackgroundColor3 = Theme.AccentDark }, 0.1)
-                task.delay(0.15, function() SmoothTween(plus, { BackgroundColor3 = Theme.ElementHov }, 0.15) end)
+                SmoothTween(plus, { BackgroundColor3 = Theme.AccentDark }, 0.08)
+                task.delay(0.12, function() SpringTween(plus, { BackgroundColor3 = Theme.ElementHov }, 0.15) end)
             end)
             minus.MouseEnter:Connect(function() SmoothTween(minus, { BackgroundColor3 = Theme.TabHover }, 0.08) end)
             minus.MouseLeave:Connect(function() SmoothTween(minus, { BackgroundColor3 = Theme.ElementHov }, 0.08) end)
@@ -1831,7 +1869,7 @@ function KreinGui:CreateWindow(cfg)
         Win.Visible = true
         Win.BackgroundTransparency = 0.08
         Wrapper.Position = UDim2.new(0.5, -280 - 32, 0.5, -190)
-        SmoothTween(Wrapper, { Position = UDim2.new(0.5, -280 - 32, 0.5, -190) }, 0.55, Enum.EasingStyle.Back)
+        SpringTween(Wrapper, { Position = UDim2.new(0.5, -280 - 32, 0.5, -190) }, 0.55)
         syncToggleBtnY(380)
         lastWrapperPos = Wrapper.Position
     end)
