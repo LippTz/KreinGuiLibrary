@@ -1,11 +1,13 @@
 --[[
-    KreinGui v5.2 – GUI Library by @uniquadev
-    Fixes:
-    - Minimize button text changes (- / +)
-    - Close button shows proper ✕ character
-    - Toggle button saves window size/position before hide
-    - Resize updates saved size so show restores correctly
-    - No blinking or size reset after hide/show
+    KreinGui v5.3 – GUI Library by @uniquadev
+    Fitur:
+    - Close button "X" (pasti muncul)
+    - Minimize ubah teks (-/+) dan nonaktifkan resize saat minimize
+    - Tombol Settings (⚙) di header
+    - Panel settings di kanan window (menempel, ikut drag)
+    - Atur keybind toggle GUI & tema, tersimpan otomatis
+    - Auto destroy GUI sebelumnya (no double)
+    - Semua fitur sebelumnya (slider, dropdown, multi, color picker, dll)
 --]]
 
 -- ============================================================
@@ -20,7 +22,7 @@ local LocalPlayer  = Players.LocalPlayer
 local Mouse        = LocalPlayer:GetMouse()
 
 -- ============================================================
--- GLOBAL CLEANUP (for re-running script)
+-- GLOBAL CLEANUP
 -- ============================================================
 local activeConnections = {}
 local snakeConnections = {}
@@ -76,7 +78,7 @@ local function OnClick(btn, fn)
 end
 
 -- ============================================================
--- THEME (DEFAULT ICE WHITE)
+-- THEME (DEFAULT)
 -- ============================================================
 local T = {
     WindowBG    = Color3.fromRGB(10, 15, 20),
@@ -245,7 +247,7 @@ local function HideTooltip()
 end
 
 -- ============================================================
--- SNAKE ANIMATION (dengan cleanup)
+-- SNAKE ANIMATION
 -- ============================================================
 local function StartSnake(abar, accent, win)
     local Glow = Instance.new("Frame", abar.Parent)
@@ -420,6 +422,444 @@ local function ShowLoading(SG, accent, title, onDone)
 end
 
 -- ============================================================
+-- SETTINGS PANEL (seperti Rayfield)
+-- ============================================================
+local function CreateSettingsPanel(SG, mainWrapper, win, T, onSettingsChanged, getToggleKeyCallback, setToggleKeyCallback)
+    local settingsVisible = false
+    local panelWidth = 260
+    local panel = Instance.new("Frame", SG)
+    panel.Name = "SettingsPanel"
+    panel.Size = UDim2.new(0, 0, 0, 0)
+    panel.Position = UDim2.new(1, 0, 0, 0)
+    panel.BackgroundColor3 = T.ElementBG
+    panel.BorderSizePixel = 0
+    panel.ZIndex = 150
+    panel.ClipsDescendants = true
+    Cor(panel, 8)
+    Str(panel, T.Accent, 1)
+
+    local header = Instance.new("Frame", panel)
+    header.Size = UDim2.new(1, 0, 0, 40)
+    header.BackgroundColor3 = T.HeaderBG
+    header.BorderSizePixel = 0
+    Cor(header, 8)
+
+    local titleLbl = Lbl(header, "Settings", UDim2.new(1, -40, 1, 0), T.TextPri)
+    titleLbl.Position = UDim2.new(0, 12, 0, 0)
+    titleLbl.Font = T.FontBold
+    titleLbl.TextSize = 14
+
+    local closeBtn = Instance.new("TextButton", header)
+    closeBtn.Size = UDim2.new(0, 28, 0, 28)
+    closeBtn.Position = UDim2.new(1, -34, 0.5, -14)
+    closeBtn.BackgroundColor3 = T.ElementHov
+    closeBtn.BorderSizePixel = 0
+    closeBtn.Text = "X"
+    closeBtn.TextSize = 12
+    closeBtn.Font = T.FontBold
+    closeBtn.TextColor3 = T.TextPri
+    Cor(closeBtn, 6)
+    OnClick(closeBtn, function() toggleSettings() end)
+
+    local content = Instance.new("ScrollingFrame", panel)
+    content.Size = UDim2.new(1, 0, 1, -40)
+    content.Position = UDim2.new(0, 0, 0, 40)
+    content.BackgroundTransparency = 1
+    content.BorderSizePixel = 0
+    content.ScrollBarThickness = 2
+    content.ScrollBarImageColor3 = T.Accent
+    content.CanvasSize = UDim2.new(0, 0, 0, 0)
+    content.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    Pad(content, 12, 12, 12, 12)
+    local layout = Instance.new("UIListLayout", content)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 10)
+
+    -- Pengaturan tersimpan
+    local settingsFileName = "KreinGuiSettings.json"
+    local currentToggleKey = Enum.KeyCode.RightShift
+    local currentThemePreset = "Ice"
+
+    local function saveSettings()
+        local data = {
+            toggleKey = tostring(currentToggleKey),
+            themePreset = currentThemePreset,
+            accentColor = {r = T.Accent.R, g = T.Accent.G, b = T.Accent.B}
+        }
+        local ok, err = pcall(function()
+            writefile(settingsFileName, HttpService:JSONEncode(data))
+        end)
+        if not ok then warn("Failed to save settings: ", err) end
+    end
+
+    local function loadSettings()
+        local ok, raw = pcall(readfile, settingsFileName)
+        if not ok or not raw then return end
+        local ok2, data = pcall(HttpService.JSONDecode, HttpService, raw)
+        if not ok2 or not data then return end
+        if data.toggleKey then
+            local success, enumKey = pcall(function()
+                return Enum.KeyCode[data.toggleKey:gsub("Enum.KeyCode.", "")]
+            end)
+            if success and enumKey then currentToggleKey = enumKey end
+        end
+        if data.themePreset and Presets[data.themePreset] then
+            currentThemePreset = data.themePreset
+            KreinGui:SetTheme(Presets[currentThemePreset])
+            onSettingsChanged()
+        elseif data.accentColor then
+            currentThemePreset = "Custom"
+            local col = Color3.new(data.accentColor.r, data.accentColor.g, data.accentColor.b)
+            KreinGui:SetTheme({ Accent = col })
+            onSettingsChanged()
+        end
+        if setToggleKeyCallback then setToggleKeyCallback(currentToggleKey) end
+    end
+
+    -- Keybind picker
+    local keybindFrame = Instance.new("Frame", content)
+    keybindFrame.Size = UDim2.new(1, 0, 0, 44)
+    keybindFrame.BackgroundColor3 = T.ElementBG
+    keybindFrame.BorderSizePixel = 0
+    Cor(keybindFrame, 6)
+    Str(keybindFrame, T.ElementStr, 1)
+
+    local keybindLabel = Lbl(keybindFrame, "Toggle GUI Key:", UDim2.new(1, -80, 0, 20), T.TextSec)
+    keybindLabel.Position = UDim2.new(0, 10, 0, 6)
+    keybindLabel.TextSize = 11
+
+    local keybindBtn = Instance.new("TextButton", keybindFrame)
+    keybindBtn.Size = UDim2.new(0, 70, 0, 28)
+    keybindBtn.Position = UDim2.new(1, -80, 0.5, -14)
+    keybindBtn.BackgroundColor3 = T.WindowBG
+    keybindBtn.BorderSizePixel = 0
+    keybindBtn.Text = tostring(currentToggleKey):gsub("Enum.KeyCode.", "")
+    keybindBtn.TextSize = 11
+    keybindBtn.Font = T.FontBold
+    keybindBtn.TextColor3 = T.Accent
+    Cor(keybindBtn, 6)
+    Str(keybindBtn, T.ElementStr, 1)
+
+    local listening = false
+    local function updateKeybindDisplay()
+        keybindBtn.Text = tostring(currentToggleKey):gsub("Enum.KeyCode.", "")
+    end
+    OnClick(keybindBtn, function()
+        if listening then
+            listening = false
+            keybindBtn.BackgroundColor3 = T.WindowBG
+            updateKeybindDisplay()
+            return
+        end
+        listening = true
+        keybindBtn.BackgroundColor3 = T.TabHov
+        keybindBtn.Text = "..."
+        local conn
+        conn = UserInput.InputBegan:Connect(function(i, gp)
+            if not listening then if conn then conn:Disconnect() end return end
+            if gp then return end
+            if i.UserInputType == Enum.UserInputType.Keyboard then
+                if i.KeyCode == Enum.KeyCode.Escape then
+                    listening = false
+                    keybindBtn.BackgroundColor3 = T.WindowBG
+                    updateKeybindDisplay()
+                    if conn then conn:Disconnect() end
+                    return
+                end
+                currentToggleKey = i.KeyCode
+                listening = false
+                keybindBtn.BackgroundColor3 = T.WindowBG
+                updateKeybindDisplay()
+                if conn then conn:Disconnect() end
+                saveSettings()
+                if setToggleKeyCallback then setToggleKeyCallback(currentToggleKey) end
+            end
+        end)
+        addConnection(conn)
+    end)
+
+    -- Theme preset dropdown
+    local themeFrame = Instance.new("Frame", content)
+    themeFrame.Size = UDim2.new(1, 0, 0, 44)
+    themeFrame.BackgroundColor3 = T.ElementBG
+    themeFrame.BorderSizePixel = 0
+    Cor(themeFrame, 6)
+    Str(themeFrame, T.ElementStr, 1)
+
+    local themeLabel = Lbl(themeFrame, "Theme Preset:", UDim2.new(1, -80, 0, 20), T.TextSec)
+    themeLabel.Position = UDim2.new(0, 10, 0, 6)
+    themeLabel.TextSize = 11
+
+    local themeDropdown = Instance.new("TextButton", themeFrame)
+    themeDropdown.Size = UDim2.new(0, 70, 0, 28)
+    themeDropdown.Position = UDim2.new(1, -80, 0.5, -14)
+    themeDropdown.BackgroundColor3 = T.WindowBG
+    themeDropdown.BorderSizePixel = 0
+    themeDropdown.Text = currentThemePreset
+    themeDropdown.TextSize = 11
+    themeDropdown.Font = T.FontBold
+    themeDropdown.TextColor3 = T.Accent
+    Cor(themeDropdown, 6)
+    Str(themeDropdown, T.ElementStr, 1)
+
+    local themeOptions = {"Ice", "Neon", "Blood", "Ocean", "Purple", "Gold", "Rose", "Matrix", "Default", "Custom"}
+    local themeOpen = false
+    local themePop = Instance.new("Frame", SG)
+    themePop.Size = UDim2.new(0, 120, 0, 0)
+    themePop.BackgroundColor3 = T.ElementBG
+    themePop.BorderSizePixel = 0
+    themePop.ClipsDescendants = true
+    themePop.Visible = false
+    themePop.ZIndex = 200
+    Cor(themePop, 6)
+    Str(themePop, T.ElementStr, 1)
+    local themeScroller = Instance.new("ScrollingFrame", themePop)
+    themeScroller.Size = UDim2.new(1, 0, 1, 0)
+    themeScroller.BackgroundTransparency = 1
+    themeScroller.BorderSizePixel = 0
+    themeScroller.ScrollBarThickness = 2
+    themeScroller.CanvasSize = UDim2.new(0, 0, 0, 0)
+    themeScroller.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    Pad(themeScroller, 4, 4, 4, 4)
+    local themeLayout = Instance.new("UIListLayout", themeScroller)
+    themeLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    themeLayout.Padding = UDim.new(0, 2)
+
+    for i, preset in ipairs(themeOptions) do
+        local btn = Instance.new("TextButton", themeScroller)
+        btn.Size = UDim2.new(1, 0, 0, 30)
+        btn.BackgroundColor3 = T.ElementHov
+        btn.BorderSizePixel = 0
+        btn.Text = preset
+        btn.TextSize = 11
+        btn.Font = T.FontFace
+        btn.TextColor3 = T.TextPri
+        btn.LayoutOrder = i
+        Cor(btn, 4)
+        OnClick(btn, function()
+            currentThemePreset = preset
+            themeDropdown.Text = preset
+            if preset ~= "Custom" then
+                KreinGui:UsePreset(preset)
+            else
+                -- Biarkan custom, tidak berubah
+            end
+            onSettingsChanged()
+            saveSettings()
+            closeThemePop()
+        end)
+        btn.MouseEnter:Connect(function() Tw(btn, {BackgroundColor3 = T.TabHov}, 0.1) end)
+        btn.MouseLeave:Connect(function() Tw(btn, {BackgroundColor3 = T.ElementHov}, 0.1) end)
+    end
+    local function closeThemePop()
+        themeOpen = false
+        Tw(themePop, {Size = UDim2.new(0, 120, 0, 0)}, 0.18)
+        task.delay(0.2, function() themePop.Visible = false end)
+    end
+    local function openThemePop()
+        local ap = themeDropdown.AbsolutePosition
+        local w = 120
+        local x = ap.X - w + 10
+        local vp = workspace.CurrentCamera.ViewportSize
+        x = math.max(4, math.min(x, vp.X - w - 4))
+        local y = ap.Y + 36
+        if y + 200 > vp.Y - 4 then y = ap.Y - 200 - 4 end
+        themePop.Position = UDim2.new(0, x, 0, y)
+        themePop.Size = UDim2.new(0, w, 0, 0)
+        themePop.Visible = true
+        themeOpen = true
+        Tw(themePop, {Size = UDim2.new(0, w, 0, 200)}, 0.22)
+    end
+    OnClick(themeDropdown, function()
+        if themeOpen then closeThemePop() else openThemePop() end
+    end)
+    UserInput.InputBegan:Connect(function(i)
+        if not themeOpen or not isDown(i) then return end
+        task.defer(function()
+            if not themeOpen then return end
+            local pos = i.Position
+            local dp = themePop.AbsolutePosition
+            local ds = themePop.AbsoluteSize
+            local cp = themeDropdown.AbsolutePosition
+            local cs = themeDropdown.AbsoluteSize
+            if not (pos.X >= dp.X and pos.X <= dp.X+ds.X and pos.Y >= dp.Y and pos.Y <= dp.Y+ds.Y) and
+               not (pos.X >= cp.X and pos.X <= cp.X+cs.X and pos.Y >= cp.Y and pos.Y <= cp.Y+cs.Y) then
+                closeThemePop()
+            end
+        end)
+    end)
+
+    -- Custom accent color picker sederhana
+    local customColorFrame = Instance.new("Frame", content)
+    customColorFrame.Size = UDim2.new(1, 0, 0, 44)
+    customColorFrame.BackgroundColor3 = T.ElementBG
+    customColorFrame.BorderSizePixel = 0
+    Cor(customColorFrame, 6)
+    Str(customColorFrame, T.ElementStr, 1)
+    local colorLabel = Lbl(customColorFrame, "Custom Accent:", UDim2.new(1, -80, 0, 20), T.TextSec)
+    colorLabel.Position = UDim2.new(0, 10, 0, 6)
+    colorLabel.TextSize = 11
+    local colorSwatch = Instance.new("Frame", customColorFrame)
+    colorSwatch.Size = UDim2.new(0, 28, 0, 24)
+    colorSwatch.Position = UDim2.new(1, -80, 0.5, -12)
+    colorSwatch.BackgroundColor3 = T.Accent
+    colorSwatch.BorderSizePixel = 0
+    Cor(colorSwatch, 6)
+    Str(colorSwatch, T.ElementStr, 1)
+    OnClick(colorSwatch, function()
+        -- Menggunakan color picker sederhana
+        local pickerFrame = Instance.new("Frame", SG)
+        pickerFrame.Size = UDim2.new(0, 200, 0, 180)
+        pickerFrame.Position = UDim2.new(0.5, -100, 0.5, -90)
+        pickerFrame.BackgroundColor3 = T.ElementBG
+        pickerFrame.BorderSizePixel = 0
+        pickerFrame.ZIndex = 300
+        Cor(pickerFrame, 8)
+        Str(pickerFrame, T.Accent, 1)
+
+        local hueBar = Instance.new("Frame", pickerFrame)
+        hueBar.Size = UDim2.new(0.8, 0, 0, 16)
+        hueBar.Position = UDim2.new(0.1, 0, 0.2, 0)
+        hueBar.BackgroundColor3 = Color3.fromRGB(255,255,255)
+        local hueImg = Instance.new("ImageLabel", hueBar)
+        hueImg.Size = UDim2.new(1,0,1,0)
+        hueImg.Image = "rbxassetid://698052001"
+
+        local satVal = Instance.new("Frame", pickerFrame)
+        satVal.Size = UDim2.new(0.6, 0, 0.4, 0)
+        satVal.Position = UDim2.new(0.1, 0, 0.45, 0)
+        satVal.BackgroundColor3 = T.Accent
+
+        local pickBtn = Instance.new("TextButton", pickerFrame)
+        pickBtn.Size = UDim2.new(0.8, 0, 0, 28)
+        pickBtn.Position = UDim2.new(0.1, 0, 0.75, 0)
+        pickBtn.Text = "Pick from Screen"
+        pickBtn.BackgroundColor3 = T.ElementHov
+        pickBtn.Font = T.FontFace
+        pickBtn.TextColor3 = T.TextPri
+        Cor(pickBtn, 6)
+
+        local okBtn = Instance.new("TextButton", pickerFrame)
+        okBtn.Size = UDim2.new(0.35, 0, 0, 28)
+        okBtn.Position = UDim2.new(0.1, 0, 0.75, 0)
+        okBtn.Text = "OK"
+        okBtn.BackgroundColor3 = T.Accent
+        okBtn.Font = T.FontBold
+        okBtn.TextColor3 = Color3.fromRGB(255,255,255)
+        okBtn.Visible = false
+        Cor(okBtn, 6)
+
+        local currentHue = 0
+        local currentSat = 1
+        local currentVal = 1
+
+        local function updateColor()
+            local col = Color3.fromHSV(currentHue, currentSat, currentVal)
+            satVal.BackgroundColor3 = col
+            colorSwatch.BackgroundColor3 = col
+            currentThemePreset = "Custom"
+            themeDropdown.Text = "Custom"
+            KreinGui:SetTheme({ Accent = col })
+            onSettingsChanged()
+            saveSettings()
+        end
+
+        hueBar.InputBegan:Connect(function(i)
+            if isDown(i) then
+                local x = math.clamp((i.Position.X - hueBar.AbsolutePosition.X) / hueBar.AbsoluteSize.X, 0, 1)
+                currentHue = x
+                updateColor()
+            end
+        end)
+        local satConn
+        local function startSatPick()
+            satConn = UserInput.InputChanged:Connect(function(i)
+                if isMove(i) then
+                    local x = math.clamp((i.Position.X - satVal.AbsolutePosition.X) / satVal.AbsoluteSize.X, 0, 1)
+                    local y = math.clamp((i.Position.Y - satVal.AbsolutePosition.Y) / satVal.AbsoluteSize.Y, 0, 1)
+                    currentSat = x
+                    currentVal = 1 - y
+                    updateColor()
+                end
+            end)
+            addConnection(satConn)
+        end
+        satVal.InputBegan:Connect(function(i)
+            if isDown(i) then
+                startSatPick()
+                local x = math.clamp((i.Position.X - satVal.AbsolutePosition.X) / satVal.AbsoluteSize.X, 0, 1)
+                local y = math.clamp((i.Position.Y - satVal.AbsolutePosition.Y) / satVal.AbsoluteSize.Y, 0, 1)
+                currentSat = x
+                currentVal = 1 - y
+                updateColor()
+            end
+        end)
+        UserInput.InputEnded:Connect(function(i)
+            if isDown(i) then
+                if satConn then satConn:Disconnect() end
+            end
+        end)
+
+        pickBtn.MouseButton1Click:Connect(function()
+            pickerFrame:Destroy()
+            local eyeActive = true
+            local connPick
+            connPick = Mouse.Button1Down:Connect(function()
+                if not eyeActive then return end
+                local target = Mouse.Target
+                local color = Color3.new(1,1,1)
+                if target then
+                    if target:IsA("BasePart") then color = target.Color
+                    elseif target:IsA("GuiObject") then color = target.BackgroundColor3
+                    else color = Color3.fromRGB(255,255,255) end
+                end
+                local h,s,v = Color3.toHSV(color)
+                currentHue = h
+                currentSat = s
+                currentVal = v
+                updateColor()
+                eyeActive = false
+                if connPick then connPick:Disconnect() end
+            end)
+            task.delay(5, function() if eyeActive then eyeActive=false; if connPick then connPick:Disconnect() end end end)
+        end)
+
+        pickerFrame.Parent = SG
+    end)
+
+    local function updatePanelPosition()
+        local wrapperPos = mainWrapper.AbsolutePosition
+        local wrapperSize = mainWrapper.AbsoluteSize
+        panel.Position = UDim2.new(0, wrapperPos.X + wrapperSize.X + 4, 0, wrapperPos.Y)
+        panel.Size = UDim2.new(0, panelWidth, 0, wrapperSize.Y)
+    end
+
+    local function toggleSettings()
+        settingsVisible = not settingsVisible
+        if settingsVisible then
+            updatePanelPosition()
+            panel.Visible = true
+            panel.Size = UDim2.new(0, 0, 0, 0)
+            Tw(panel, {Size = UDim2.new(0, panelWidth, 0, mainWrapper.AbsoluteSize.Y)}, 0.25)
+        else
+            Tw(panel, {Size = UDim2.new(0, 0, 0, 0)}, 0.2)
+            task.delay(0.2, function() panel.Visible = false end)
+        end
+    end
+
+    mainWrapper:GetPropertyChangedSignal("Position"):Connect(function()
+        if settingsVisible then updatePanelPosition() end
+    end)
+    mainWrapper:GetPropertyChangedSignal("Size"):Connect(function()
+        if settingsVisible then updatePanelPosition() end
+    end)
+
+    loadSettings()
+    if getToggleKeyCallback then getToggleKeyCallback(currentToggleKey) end
+    return toggleSettings, function() return currentToggleKey end, function(k) currentToggleKey = k; saveSettings() end
+end
+
+-- ============================================================
 -- LIBRARY
 -- ============================================================
 local KreinGui = {}
@@ -444,10 +884,9 @@ function KreinGui:UsePreset(name)
 end
 
 -- ============================================================
--- CREATE WINDOW (dengan auto destroy previous GUI)
+-- CREATE WINDOW
 -- ============================================================
 function KreinGui:CreateWindow(cfg)
-    -- Hapus GUI sebelumnya jika ada
     if currentGui and currentGui.Parent then
         destroyAllConnections()
         currentGui:Destroy()
@@ -542,11 +981,11 @@ function KreinGui:CreateWindow(cfg)
         SL.Position=UDim2.new(0,52,0,28); SL.Font=T.FontFace; SL.TextSize=11
     end
 
-    -- CLOSE BUTTON (fix karakter)
+    -- CLOSE BUTTON (X)
     local Cb = Instance.new("TextButton", H)
     Cb.Size = UDim2.new(0,32,0,32); Cb.Position = UDim2.new(1,-40,0.5,-16)
     Cb.BackgroundColor3 = Color3.fromRGB(60,35,35); Cb.BorderSizePixel = 0
-    Cb.Text = "\u{2715}"  -- Unicode multiplication sign (✕)
+    Cb.Text = "X"
     Cb.TextSize = 14
     Cb.Font = T.FontBold
     Cb.TextColor3 = T.CloseRed
@@ -555,11 +994,11 @@ function KreinGui:CreateWindow(cfg)
     Cor(Cb,7)
     OnClick(Cb, function() SG:Destroy() end)
 
-    -- MINIMIZE BUTTON (teks berubah - / +)
+    -- MINIMIZE BUTTON
     local Mb = Instance.new("TextButton", H)
     Mb.Size = UDim2.new(0,32,0,32); Mb.Position = UDim2.new(1,-78,0.5,-16)
     Mb.BackgroundColor3 = Color3.fromRGB(40,40,50); Mb.BorderSizePixel = 0
-    Mb.Text = "−"  -- karakter minus
+    Mb.Text = "−"
     Mb.TextSize = 16
     Mb.Font = T.FontBold
     Mb.TextColor3 = T.MinGray
@@ -567,17 +1006,30 @@ function KreinGui:CreateWindow(cfg)
     Mb.AutoButtonColor = false
     Cor(Mb,7)
 
+    -- SETTINGS BUTTON
+    local SettingsBtn = Instance.new("TextButton", H)
+    SettingsBtn.Size = UDim2.new(0,32,0,32); SettingsBtn.Position = UDim2.new(1,-116,0.5,-16)
+    SettingsBtn.BackgroundColor3 = T.ElementHov
+    SettingsBtn.BorderSizePixel = 0
+    SettingsBtn.Text = "⚙"
+    SettingsBtn.TextSize = 16
+    SettingsBtn.Font = T.FontBold
+    SettingsBtn.TextColor3 = T.TextPri
+    SettingsBtn.ZIndex = 6
+    SettingsBtn.AutoButtonColor = false
+    Cor(SettingsBtn, 7)
+
     local function syncToggleBtnY(h)
-        if ToggleBtn then
-            ToggleBtn.Position = UDim2.new(0, 0, 0, h/2 - 40)
-        end
+        if ToggleBtn then ToggleBtn.Position = UDim2.new(0, 0, 0, h/2 - 40) end
     end
 
     local mini = false
+    local resizeEnabled = true
     OnClick(Mb, function()
         mini = not mini
         if mini then
-            Mb.Text = "+"   -- berubah jadi plus saat minimize
+            Mb.Text = "+"
+            resizeEnabled = false
             Tw(Win, {Size = UDim2.new(0,560,0,52)}, 0.3)
             Tw(Wrapper, {Size = UDim2.new(0,560+32,0,52)}, 0.3)
             task.delay(0.2, function()
@@ -585,12 +1037,12 @@ function KreinGui:CreateWindow(cfg)
                 local gl = Win:FindFirstChild("ABarGlow")
                 if gl then gl.Visible = false end
                 syncToggleBtnY(52)
-                -- Update saved size agar hide/show konsisten
                 lastWrapperSize = Wrapper.Size
                 lastWinSize = Win.Size
             end)
         else
-            Mb.Text = "−"   -- kembali ke minus
+            Mb.Text = "−"
+            resizeEnabled = true
             ABar.Visible = true
             local gl = Win:FindFirstChild("ABarGlow")
             if gl then gl.Visible = true end
@@ -606,7 +1058,7 @@ function KreinGui:CreateWindow(cfg)
 
     EnableDrag(Wrapper, H)
 
-    -- TOGGLE BUTTON (sembunyikan GUI) dengan penyimpanan ukuran
+    -- TOGGLE BUTTON (K)
     local ToggleBtn = Instance.new("TextButton", Wrapper)
     ToggleBtn.Name = "KreinToggleBtn"
     ToggleBtn.Size = UDim2.new(0, 28, 0, 80)
@@ -657,7 +1109,6 @@ function KreinGui:CreateWindow(cfg)
     TBGlow.BorderSizePixel = 0
     Cor(TBGlow, 2)
 
-    -- Variabel untuk menyimpan ukuran dan posisi saat hide
     local guiVisible = true
     local lastWrapperSize = Wrapper.Size
     local lastWinSize = Win.Size
@@ -680,11 +1131,10 @@ function KreinGui:CreateWindow(cfg)
         end
     end
 
-    OnClick(ToggleBtn, function()
+    local function toggleGuiVisibility()
         guiVisible = not guiVisible
         local currentWinH = Win.Size.Y.Offset
         if guiVisible then
-            -- Tampilkan GUI dengan ukuran terakhir yang disimpan
             Win.Visible = true
             Win.BackgroundTransparency = 0
             Win.Size = UDim2.new(0, 0, 0, currentWinH)
@@ -694,7 +1144,6 @@ function KreinGui:CreateWindow(cfg)
             Wrapper.Size = lastWrapperSize
             syncToggleBtnY(lastWinSize.Y.Offset)
         else
-            -- Sembunyikan GUI: simpan ukuran dan posisi saat ini
             lastWrapperSize = Wrapper.Size
             lastWinSize = Win.Size
             lastWrapperPos = Wrapper.Position
@@ -707,7 +1156,9 @@ function KreinGui:CreateWindow(cfg)
             Tw(Wrapper, {Position = UDim2.new(0, -4, currentY.Scale, currentY.Offset)}, 0.35)
         end
         updateToggleBtn()
-    end)
+    end
+
+    OnClick(ToggleBtn, toggleGuiVisibility)
 
     ToggleBtn.MouseEnter:Connect(function()
         Tw(ToggleBtn, {BackgroundColor3=T.ElementHov}, 0.12)
@@ -768,7 +1219,7 @@ function KreinGui:CreateWindow(cfg)
     ContentContainer.Position = UDim2.new(0,0,0,32)
     ContentContainer.BackgroundTransparency = 1
 
-    -- RESIZE GRIP (dengan update lastWrapperSize & lastWinSize)
+    -- RESIZE GRIP (dengan pengecekan resizeEnabled)
     local ResizeGrip = Instance.new("TextButton", Win)
     ResizeGrip.Size = UDim2.new(0, 12, 0, 12)
     ResizeGrip.Position = UDim2.new(1, -14, 1, -14)
@@ -780,7 +1231,7 @@ function KreinGui:CreateWindow(cfg)
     local resizeActive = false
     local resizeStartPos, resizeStartSize
     ResizeGrip.InputBegan:Connect(function(i)
-        if isDown(i) then
+        if isDown(i) and resizeEnabled then
             resizeActive = true
             resizeStartPos = i.Position
             resizeStartSize = Wrapper.Size
@@ -788,14 +1239,13 @@ function KreinGui:CreateWindow(cfg)
         end
     end)
     UserInput.InputChanged:Connect(function(i)
-        if resizeActive and isMove(i) then
+        if resizeActive and isMove(i) and resizeEnabled then
             local delta = i.Position - resizeStartPos
             local newW = math.max(400, resizeStartSize.X.Offset + delta.X)
             local newH = math.max(200, resizeStartSize.Y.Offset + delta.Y)
             Wrapper.Size = UDim2.new(0, newW, 0, newH)
             Win.Size = UDim2.new(0, newW - 32, 0, newH)
             syncToggleBtnY(newH)
-            -- Simpan ukuran terbaru agar hide/show tidak kembali ke default
             lastWrapperSize = Wrapper.Size
             lastWinSize = Win.Size
         end
@@ -803,6 +1253,57 @@ function KreinGui:CreateWindow(cfg)
     UserInput.InputEnded:Connect(function(i)
         if isDown(i) then resizeActive = false; dragEnabled = true end
     end)
+
+    -- Settings Panel
+    local function onThemeChanged()
+        Win.BackgroundColor3 = T.WindowBG
+        H.BackgroundColor3 = T.HeaderBG
+        TP.BackgroundColor3 = T.TabBG
+        SepL.BackgroundColor3 = T.Sep
+        ABar.BackgroundColor3 = T.Accent
+        LogoBg.BackgroundColor3 = T.Accent
+        LogoStr.Color = T.Accent
+        TBStr.Color = T.Accent
+        TBIcon.TextColor3 = T.Accent
+        TBLabel.TextColor3 = T.Accent
+        TBSub.TextColor3 = Color3.new(T.Accent.R*0.65, T.Accent.G*0.65, T.Accent.B*0.65)
+        TBGlow.BackgroundColor3 = T.Accent
+        ResizeGrip.BackgroundColor3 = T.Accent
+        for _, btn in ipairs(tBtns) do
+            local on = (btn == tBtns[tActive])
+            btn.BackgroundColor3 = on and T.TabOn or T.TabDef
+            local l = btn:FindFirstChild("L")
+            if l then l.TextColor3 = on and T.TabOnText or T.TabOffText end
+            local bar = btn:FindFirstChild("B")
+            if bar then bar.BackgroundColor3 = T.AccentHov end
+        end
+    end
+
+    local toggleSettingsPanel, getKey, setKey = CreateSettingsPanel(SG, Wrapper, Win, T, onThemeChanged)
+    OnClick(SettingsBtn, function() toggleSettingsPanel() end)
+
+    -- Global keybind toggle GUI
+    local currentKeybind = Enum.KeyCode.RightShift
+    local keybindConnection
+    local function applyKeybind()
+        if keybindConnection then keybindConnection:Disconnect() end
+        keybindConnection = UserInput.InputBegan:Connect(function(i, gp)
+            if gp then return end
+            if i.UserInputType == Enum.UserInputType.Keyboard and i.KeyCode == currentKeybind then
+                toggleGuiVisibility()
+            end
+        end)
+        addConnection(keybindConnection)
+    end
+    -- Override setKey untuk memperbarui keybind
+    local oldSetKey = setKey
+    setKey = function(k)
+        oldSetKey(k)
+        currentKeybind = k
+        applyKeybind()
+    end
+    currentKeybind = getKey()
+    applyKeybind()
 
     -- Window Object
     local W={}
@@ -828,13 +1329,10 @@ function KreinGui:CreateWindow(cfg)
         end
         SearchBox.Text = ""
         for _, api in pairs(KreinGui.Flags) do
-            if api._element then
-                api._element.Visible = true
-            end
+            if api._element then api._element.Visible = true end
         end
     end
 
-    -- Save/Load
     local flags={}
     local function sCol(c) return{r=c.R,g=c.G,b=c.B} end
     local function dCol(t) return Color3.new(t.r,t.g,t.b) end
@@ -907,34 +1405,11 @@ function KreinGui:CreateWindow(cfg)
     function W:Notify(msg,dur) Notify(SG,msg,dur) end
 
     function W:ReloadTheme()
-        Win.BackgroundColor3 = T.WindowBG
-        H.BackgroundColor3 = T.HeaderBG
-        TP.BackgroundColor3 = T.TabBG
-        SepL.BackgroundColor3 = T.Sep
-        ABar.BackgroundColor3 = T.Accent
-        LogoBg.BackgroundColor3 = T.Accent
-        LogoBg.BackgroundTransparency = 0.12
-        LogoStr.Color = T.Accent
-        TBStr.Color = T.Accent
-        TBIcon.TextColor3 = T.Accent
-        TBLabel.TextColor3 = T.Accent
-        TBSub.TextColor3 = Color3.new(T.Accent.R*0.65, T.Accent.G*0.65, T.Accent.B*0.65)
-        TBGlow.BackgroundColor3 = T.Accent
-        ResizeGrip.BackgroundColor3 = T.Accent
-        for _, btn in ipairs(tBtns) do
-            local on = (btn == tBtns[tActive])
-            btn.BackgroundColor3 = on and T.TabOn or T.TabDef
-            local l = btn:FindFirstChild("L")
-            if l then l.TextColor3 = on and T.TabOnText or T.TabOffText end
-            local bar = btn:FindFirstChild("B")
-            if bar then bar.BackgroundColor3 = T.AccentHov end
-        end
-        Notify(SG,"Theme reloaded (partial)",2)
+        onThemeChanged()
+        Notify(SG,"Theme reloaded",2)
     end
 
-    -- ============================================================
-    -- CREATE TAB (semua method termasuk CreateDropdown)
-    -- ============================================================
+    -- CREATE TAB
     function W:CreateTab(name)
         local idx=#tBtns+1
 
@@ -1013,7 +1488,7 @@ function KreinGui:CreateWindow(cfg)
             element.MouseLeave:Connect(function() HideTooltip() end)
         end
 
-        -- SEMUA METHOD (termasuk CreateDropdown)
+        -- ELEMENT METHODS
         function Tab:CreateLabel(txt, hint)
             local c=Card(36); Pad(c,0,0,12,12)
             local l=Lbl(c,txt,UDim2.new(1,0,1,0),T.TextSec)
@@ -1226,103 +1701,100 @@ function KreinGui:CreateWindow(cfg)
             return api
         end
 
-        -- CREATE DROPDOWN (Single Select)
         function Tab:CreateDropdown(cfg2)
-            cfg2 = cfg2 or {}
-            local opts = cfg2.Options or {}
-            local sel = cfg2.Default or (opts[1] or "")
-            local open = false
-            local c = Card(44); Pad(c,0,0,12,12)
-            Lbl(c, cfg2.Title or "Dropdown", UDim2.new(1,-100,1,0)).TextSize = 13
+            cfg2=cfg2 or {}
+            local opts=cfg2.Options or {}
+            local sel=cfg2.Default or (opts[1] or "")
+            local open=false
+            local c=Card(44); Pad(c,0,0,12,12)
+            Lbl(c,cfg2.Title or "Dropdown",UDim2.new(1,-100,1,0)).TextSize=13
+            local SF=Instance.new("Frame",c)
+            SF.Size=UDim2.new(0,90,0,28); SF.Position=UDim2.new(1,-90,0.5,-14)
+            SF.BackgroundColor3=T.WindowBG; SF.BorderSizePixel=0; Cor(SF,6); Str(SF,T.ElementStr,1)
+            local SL=Lbl(SF,sel,UDim2.new(1,-18,1,0),T.TextPri); SL.Position=UDim2.new(0,6,0,0); SL.Font=T.FontFace; SL.TextSize=11
+            local Arr=Lbl(SF,"▼",UDim2.new(0,14,1,0),T.TextMut,Enum.TextXAlignment.Center); Arr.Position=UDim2.new(1,-16,0,0); Arr.TextSize=12
 
-            local SF = Instance.new("Frame", c)
-            SF.Size = UDim2.new(0,90,0,28); SF.Position = UDim2.new(1,-90,0.5,-14)
-            SF.BackgroundColor3 = T.WindowBG; SF.BorderSizePixel = 0; Cor(SF,6); Str(SF,T.ElementStr,1)
-            local SL = Lbl(SF, sel, UDim2.new(1,-18,1,0), T.TextPri); SL.Position = UDim2.new(0,6,0,0); SL.Font = T.FontFace; SL.TextSize = 11
-            local Arr = Lbl(SF, "▼", UDim2.new(0,14,1,0), T.TextMut, Enum.TextXAlignment.Center); Arr.Position = UDim2.new(1,-16,0,0); Arr.TextSize = 12
-
-            local DF = Instance.new("Frame", SG)
-            DF.Size = UDim2.new(0,100,0,0)
-            DF.BackgroundColor3 = T.ElementBG
-            DF.BorderSizePixel = 0
-            DF.ClipsDescendants = true
-            DF.Visible = false
-            DF.ZIndex = 160
+            local DF=Instance.new("Frame",SG)
+            DF.Size=UDim2.new(0,100,0,0)
+            DF.BackgroundColor3=T.ElementBG
+            DF.BorderSizePixel=0
+            DF.ClipsDescendants=true
+            DF.Visible=false
+            DF.ZIndex=160
             Cor(DF,6); Str(DF,T.ElementStr,1)
 
-            local DSF = Instance.new("ScrollingFrame", DF)
-            DSF.Size = UDim2.new(1,0,1,0)
-            DSF.BackgroundTransparency = 1
-            DSF.BorderSizePixel = 0
-            DSF.ScrollBarThickness = 3
-            DSF.ScrollBarImageColor3 = T.Accent
-            DSF.CanvasSize = UDim2.new(0,0,0,0)
-            DSF.AutomaticCanvasSize = Enum.AutomaticSize.Y
-            DSF.ClipsDescendants = true
-            DSF.ZIndex = 161
+            local DSF=Instance.new("ScrollingFrame",DF)
+            DSF.Size=UDim2.new(1,0,1,0)
+            DSF.BackgroundTransparency=1
+            DSF.BorderSizePixel=0
+            DSF.ScrollBarThickness=3
+            DSF.ScrollBarImageColor3=T.Accent
+            DSF.CanvasSize=UDim2.new(0,0,0,0)
+            DSF.AutomaticCanvasSize=Enum.AutomaticSize.Y
+            DSF.ClipsDescendants=true
+            DSF.ZIndex=161
             Pad(DSF,4,4,4,4)
 
-            local DL = Instance.new("UIListLayout", DSF)
-            DL.SortOrder = Enum.SortOrder.LayoutOrder
-            DL.Padding = UDim.new(0,2)
+            local DL=Instance.new("UIListLayout",DSF)
+            DL.SortOrder=Enum.SortOrder.LayoutOrder
+            DL.Padding=UDim.new(0,2)
 
-            local oH = 32
-            local MAX_H = 200
+            local oH=32
+            local MAX_H=200
 
             for i, opt in ipairs(opts) do
-                local ob = Instance.new("TextButton", DSF)
-                ob.Size = UDim2.new(1,0,0,oH-2)
-                ob.BackgroundColor3 = T.ElementBG
-                ob.BorderSizePixel = 0
-                ob.Text = opt
-                ob.TextSize = 12
-                ob.Font = T.FontFace
-                ob.TextColor3 = T.TextSec
-                ob.TextXAlignment = Enum.TextXAlignment.Left
-                ob.AutoButtonColor = false
-                ob.ZIndex = 162
-                ob.LayoutOrder = i
+                local ob=Instance.new("TextButton",DSF)
+                ob.Size=UDim2.new(1,0,0,oH-2)
+                ob.BackgroundColor3=T.ElementBG
+                ob.BorderSizePixel=0
+                ob.Text=opt
+                ob.TextSize=12
+                ob.Font=T.FontFace
+                ob.TextColor3=T.TextSec
+                ob.TextXAlignment=Enum.TextXAlignment.Left
+                ob.AutoButtonColor=false
+                ob.ZIndex=162
+                ob.LayoutOrder=i
                 Cor(ob,4); Pad(ob,0,0,8,0)
                 ob.MouseEnter:Connect(function() Tw(ob,{BackgroundColor3=T.TabHov},0.12) end)
                 ob.MouseLeave:Connect(function() Tw(ob,{BackgroundColor3=T.ElementBG},0.12) end)
-                OnClick(ob, function()
-                    sel = opt
-                    SL.Text = opt
-                    pcall(cfg2.Callback or function()end, sel)
+                OnClick(ob,function()
+                    sel=opt
+                    SL.Text=opt
+                    pcall(cfg2.Callback or function()end,sel)
                     closeDD()
                 end)
             end
 
-            local contentH = #opts * oH + 8
-            local dispH = math.min(contentH, MAX_H)
-            DSF.ScrollBarThickness = contentH > MAX_H and 3 or 0
+            local contentH=#opts*oH+8
+            local dispH=math.min(contentH,MAX_H)
+            DSF.ScrollBarThickness = contentH>MAX_H and 3 or 0
 
             local function closeDD()
-                if not open then return end; open = false
-                Tw(DF, {Size = UDim2.new(0, DF.Size.X.Offset, 0, 0)}, 0.18)
-                Arr.Text = "▼"
-                task.delay(0.2, function() DF.Visible = false end)
+                if not open then return end; open=false
+                Tw(DF,{Size=UDim2.new(0,DF.Size.X.Offset,0,0)},0.18)
+                Arr.Text="▼"
+                task.delay(0.2,function() DF.Visible=false end)
             end
 
             local function openDD()
-                local ap = SF.AbsolutePosition
-                local as = SF.AbsoluteSize
-                local w = math.max(as.X+10, 100)
-                local vp = workspace.CurrentCamera.ViewportSize
-                local x = math.min(ap.X, vp.X - w - 4)
-                local spaceBelow = vp.Y - (ap.Y + as.Y + 4)
-                local spaceAbove = ap.Y - 4
-                local posY = (spaceBelow >= dispH or spaceBelow >= spaceAbove) and (ap.Y + as.Y + 4) or (ap.Y - dispH - 4)
-                DF.Position = UDim2.new(0, x, 0, posY)
-                DF.Size = UDim2.new(0, w, 0, 0)
-                DF.Visible = true; open = true
-                Tw(DF, {Size = UDim2.new(0, w, 0, dispH)}, 0.22)
-                Arr.Text = "▲"
+                local ap=SF.AbsolutePosition; local as=SF.AbsoluteSize
+                local w=math.max(as.X+10,100)
+                local vp=workspace.CurrentCamera.ViewportSize
+                local x=math.min(ap.X, vp.X-w-4)
+                local spaceBelow=vp.Y-(ap.Y+as.Y+4)
+                local spaceAbove=ap.Y-4
+                local posY=(spaceBelow>=dispH or spaceBelow>=spaceAbove) and (ap.Y+as.Y+4) or (ap.Y-dispH-4)
+                DF.Position=UDim2.new(0,x,0,posY)
+                DF.Size=UDim2.new(0,w,0,0)
+                DF.Visible=true; open=true
+                Tw(DF,{Size=UDim2.new(0,w,0,dispH)},0.22)
+                Arr.Text="▲"
             end
 
-            local TB2 = Instance.new("TextButton", c)
-            TB2.Size = UDim2.new(1,0,1,0); TB2.BackgroundTransparency = 1; TB2.BorderSizePixel = 0; TB2.Text = ""; TB2.AutoButtonColor = false
-            OnClick(TB2, function() if open then closeDD() else openDD() end end)
+            local TB2=Instance.new("TextButton",c)
+            TB2.Size=UDim2.new(1,0,1,0); TB2.BackgroundTransparency=1; TB2.BorderSizePixel=0; TB2.Text=""; TB2.AutoButtonColor=false
+            OnClick(TB2,function() if open then closeDD() else openDD() end end)
             TB2.MouseEnter:Connect(function() Tw(c,{BackgroundColor3=T.ElementHov},0.15) end)
             TB2.MouseLeave:Connect(function() Tw(c,{BackgroundColor3=T.ElementBG},0.15) end)
 
@@ -1330,34 +1802,29 @@ function KreinGui:CreateWindow(cfg)
                 if not open or not isDown(i) then return end
                 task.defer(function()
                     if not open then return end
-                    local pos = i.Position
-                    local dp = DF.AbsolutePosition
-                    local ds = DF.AbsoluteSize
-                    local cp2 = c.AbsolutePosition
-                    local cs = c.AbsoluteSize
-                    if not (pos.X >= dp.X and pos.X <= dp.X+ds.X and pos.Y >= dp.Y and pos.Y <= dp.Y+ds.Y) and
-                       not (pos.X >= cp2.X and pos.X <= cp2.X+cs.X and pos.Y >= cp2.Y and pos.Y <= cp2.Y+cs.Y) then
+                    local pos=i.Position
+                    local dp=DF.AbsolutePosition; local ds=DF.AbsoluteSize
+                    local cp2=c.AbsolutePosition; local cs=c.AbsoluteSize
+                    if not(pos.X>=dp.X and pos.X<=dp.X+ds.X and pos.Y>=dp.Y and pos.Y<=dp.Y+ds.Y) and
+                       not(pos.X>=cp2.X and pos.X<=cp2.X+cs.X and pos.Y>=cp2.Y and pos.Y<=cp2.Y+cs.Y) then
                         closeDD()
                     end
                 end)
             end)
 
-            local api = {}
-            function api:Set(v) sel = v; SL.Text = v; pcall(cfg2.Callback or function()end, v) end
+            local api={}
+            function api:Set(v) sel=v; SL.Text=v; pcall(cfg2.Callback or function()end,v) end
             function api:Get() return sel end
-            rfl(cfg2.Flag, api, c)
+            rfl(cfg2.Flag,api,c)
             if cfg2.Hint then addTooltip(c, cfg2.Hint) end
             return api
         end
 
-        -- Multi-Select Dropdown
         function Tab:CreateMultiDropdown(cfg2)
             cfg2=cfg2 or {}
             local opts=cfg2.Options or {}
-            local selected = {}
-            for _, def in ipairs(cfg2.Default or {}) do
-                selected[def] = true
-            end
+            local selected={}
+            for _,def in ipairs(cfg2.Default or {}) do selected[def]=true end
             local open=false
             local c=Card(44); Pad(c,0,0,12,12)
             Lbl(c,cfg2.Title or "Multi-Dropdown",UDim2.new(1,-100,1,0)).TextSize=13
@@ -1395,46 +1862,44 @@ function KreinGui:CreateWindow(cfg)
             local MAX_H=200
 
             local function updateSelectedText()
-                local selList = {}
-                for k,v in pairs(selected) do if v then table.insert(selList, k) end end
-                SL.Text = table.concat(selList, ", ")
+                local selList={}
+                for k,v in pairs(selected) do if v then table.insert(selList,k) end end
+                SL.Text = table.concat(selList,", ")
                 pcall(cfg2.Callback or function()end, selList)
             end
 
             for i,opt in ipairs(opts) do
-                local row = Instance.new("Frame", DSF)
-                row.Size = UDim2.new(1,0,0,oH-2)
-                row.BackgroundColor3 = T.ElementBG
-                row.BorderSizePixel = 0
-                row.LayoutOrder = i
+                local row=Instance.new("Frame",DSF)
+                row.Size=UDim2.new(1,0,0,oH-2)
+                row.BackgroundColor3=T.ElementBG
+                row.BorderSizePixel=0
+                row.LayoutOrder=i
                 Cor(row,4); Pad(row,0,0,8,0)
-                local chk = Instance.new("TextButton", row)
-                chk.Size = UDim2.new(0,20,0,20)
-                chk.Position = UDim2.new(0,6,0.5,-10)
-                chk.BackgroundColor3 = selected[opt] and T.Accent or T.ToggleOff
-                chk.BorderSizePixel = 0
-                chk.Text = selected[opt] and "✓" or ""
-                chk.TextColor3 = Color3.fromRGB(255,255,255)
-                chk.Font = T.FontBold
-                chk.TextSize = 12
-                Cor(chk, 4)
-                local lbl = Lbl(row, opt, UDim2.new(1,-34,1,0), T.TextSec)
-                lbl.Position = UDim2.new(0,34,0,0)
-                lbl.Font = T.FontFace
-                lbl.TextSize = 11
-                OnClick(chk, function()
-                    selected[opt] = not selected[opt]
-                    chk.BackgroundColor3 = selected[opt] and T.Accent or T.ToggleOff
-                    chk.Text = selected[opt] and "✓" or ""
+                local chk=Instance.new("TextButton",row)
+                chk.Size=UDim2.new(0,20,0,20)
+                chk.Position=UDim2.new(0,6,0.5,-10)
+                chk.BackgroundColor3=selected[opt] and T.Accent or T.ToggleOff
+                chk.BorderSizePixel=0
+                chk.Text=selected[opt] and "✓" or ""
+                chk.TextColor3=Color3.fromRGB(255,255,255)
+                chk.Font=T.FontBold
+                chk.TextSize=12
+                Cor(chk,4)
+                local lbl=Lbl(row,opt,UDim2.new(1,-34,1,0),T.TextSec)
+                lbl.Position=UDim2.new(0,34,0,0); lbl.Font=T.FontFace; lbl.TextSize=11
+                OnClick(chk,function()
+                    selected[opt]=not selected[opt]
+                    chk.BackgroundColor3=selected[opt] and T.Accent or T.ToggleOff
+                    chk.Text=selected[opt] and "✓" or ""
                     updateSelectedText()
                 end)
                 row.MouseEnter:Connect(function() Tw(row,{BackgroundColor3=T.TabHov},0.12) end)
                 row.MouseLeave:Connect(function() Tw(row,{BackgroundColor3=T.ElementBG},0.12) end)
             end
 
-            local contentH = #opts * oH + 8
-            local dispH = math.min(contentH, MAX_H)
-            DSF.ScrollBarThickness = contentH > MAX_H and 3 or 0
+            local contentH=#opts*oH+8
+            local dispH=math.min(contentH,MAX_H)
+            DSF.ScrollBarThickness = contentH>MAX_H and 3 or 0
 
             local function closeDD()
                 if not open then return end; open=false
@@ -1446,10 +1911,10 @@ function KreinGui:CreateWindow(cfg)
                 local ap=SF.AbsolutePosition; local as=SF.AbsoluteSize
                 local w=math.max(as.X+10,150)
                 local vp=workspace.CurrentCamera.ViewportSize
-                local x = math.min(ap.X, vp.X - w - 4)
-                local spaceBelow=vp.Y - (ap.Y+as.Y+4)
-                local spaceAbove=ap.Y - 4
-                local posY = (spaceBelow >= dispH or spaceBelow >= spaceAbove) and (ap.Y+as.Y+4) or (ap.Y - dispH - 4)
+                local x=math.min(ap.X, vp.X-w-4)
+                local spaceBelow=vp.Y-(ap.Y+as.Y+4)
+                local spaceAbove=ap.Y-4
+                local posY=(spaceBelow>=dispH or spaceBelow>=spaceAbove) and (ap.Y+as.Y+4) or (ap.Y-dispH-4)
                 DF.Position=UDim2.new(0,x,0,posY)
                 DF.Size=UDim2.new(0,w,0,0)
                 DF.Visible=true; open=true
@@ -1475,7 +1940,7 @@ function KreinGui:CreateWindow(cfg)
                 end)
             end)
             local api={}
-            function api:Set(tbl) for k,_ in pairs(selected) do selected[k]=false end for _,v in ipairs(tbl) do selected[v]=true end; updateSelectedText() end
+            function api:Set(tbl) for k,_ in pairs(selected) do selected[k]=false end; for _,v in ipairs(tbl) do selected[v]=true end; updateSelectedText() end
             function api:Get() local r={}; for k,v in pairs(selected) do if v then table.insert(r,k) end end; return r end
             rfl(cfg2.Flag,api,c)
             if cfg2.Hint then addTooltip(c, cfg2.Hint) end
@@ -1509,7 +1974,8 @@ function KreinGui:CreateWindow(cfg)
             Plus.MouseLeave:Connect(function() Tw(Plus,{BackgroundColor3=T.ElementHov},0.12) end)
             local api={}
             local function updN() VL.Text=tostring(val); pcall(cfg2.Callback or function()end,val) end
-            function api:Set(v) val=math.clamp(v,mn,mx); updN() end; function api:Get() return val end
+            function api:Set(v) val=math.clamp(v,mn,mx); updN() end
+            function api:Get() return val end
             OnClick(Mins,function() val=math.clamp(val-step,mn,mx); updN(); Tw(Mins,{BackgroundColor3=T.AccentDark},0.1); task.delay(0.15,function() Tw(Mins,{BackgroundColor3=T.ElementHov},0.15) end) end)
             OnClick(Plus,function() val=math.clamp(val+step,mn,mx); updN(); Tw(Plus,{BackgroundColor3=T.AccentDark},0.1); task.delay(0.15,function() Tw(Plus,{BackgroundColor3=T.ElementHov},0.15) end) end)
             rfl(cfg2.Flag,api,c)
@@ -1551,28 +2017,22 @@ function KreinGui:CreateWindow(cfg)
             local Sw=Instance.new("Frame",c); Sw.Size=UDim2.new(0,34,0,24); Sw.Position=UDim2.new(1,-38,0.5,-12); Sw.BackgroundColor3=col; Sw.BorderSizePixel=0; Cor(Sw,5); Str(Sw,T.ElementStr,1)
             local PW,PH=210,270
             local Pop=Instance.new("Frame",SG); Pop.Size=UDim2.new(0,PW,0,0); Pop.BackgroundColor3=T.ElementBG; Pop.BorderSizePixel=0; Pop.ClipsDescendants=true; Pop.Visible=false; Pop.ZIndex=160; Cor(Pop,8); Str(Pop,T.ElementStr,1)
-            -- SV
             local SV=Instance.new("Frame",Pop); SV.Size=UDim2.new(1,-16,0,110); SV.Position=UDim2.new(0,8,0,8); SV.BackgroundColor3=HSV(tH,1,1); SV.BorderSizePixel=0; SV.ZIndex=161; Cor(SV,6)
             local WL=Instance.new("Frame",SV); WL.Size=UDim2.new(1,0,1,0); WL.BackgroundColor3=Color3.fromRGB(255,255,255); WL.BorderSizePixel=0; WL.ZIndex=162; Cor(WL,6)
             local wg=Instance.new("UIGradient",WL); wg.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(1,1)})
             local BL=Instance.new("Frame",SV); BL.Size=UDim2.new(1,0,1,0); BL.BackgroundColor3=Color3.fromRGB(0,0,0); BL.BorderSizePixel=0; BL.ZIndex=163; Cor(BL,6)
             local bg=Instance.new("UIGradient",BL); bg.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(1,0)}); bg.Rotation=90
             local SVC=Instance.new("Frame",SV); SVC.Size=UDim2.new(0,12,0,12); SVC.Position=UDim2.new(tS,-6,1-tV,-6); SVC.BackgroundColor3=Color3.fromRGB(255,255,255); SVC.BorderSizePixel=0; SVC.ZIndex=165; Cor(SVC,6); Str(SVC,Color3.fromRGB(0,0,0),1)
-            -- Hue
             local HB=Instance.new("Frame",Pop); HB.Size=UDim2.new(1,-16,0,16); HB.Position=UDim2.new(0,8,0,124); HB.BackgroundColor3=Color3.fromRGB(255,255,255); HB.BorderSizePixel=0; HB.ZIndex=161; Cor(HB,4)
             local HI=Instance.new("ImageLabel",HB); HI.Size=UDim2.new(1,0,1,0); HI.BackgroundTransparency=1; HI.Image="rbxassetid://698052001"; HI.ZIndex=162
             local HC=Instance.new("Frame",HB); HC.Size=UDim2.new(0,6,1,4); HC.Position=UDim2.new(tH,-3,0,-2); HC.BackgroundColor3=Color3.fromRGB(255,255,255); HC.BorderSizePixel=0; HC.ZIndex=163; Cor(HC,3); Str(HC,Color3.fromRGB(0,0,0),1)
-            -- Hex
             local HxF=Instance.new("Frame",Pop); HxF.Size=UDim2.new(1,-16,0,26); HxF.Position=UDim2.new(0,8,0,148); HxF.BackgroundColor3=T.WindowBG; HxF.BorderSizePixel=0; HxF.ZIndex=161; Cor(HxF,5); Str(HxF,T.ElementStr,1)
             Lbl(HxF,"#",UDim2.new(0,16,1,0),T.TextMut,Enum.TextXAlignment.Center).ZIndex=162
             local HL=Lbl(HxF,toHex(col),UDim2.new(1,-18,1,0),T.TextPri); HL.Position=UDim2.new(0,18,0,0); HL.TextSize=11; HL.Font=T.FontBold; HL.ZIndex=162
-            -- Preview
             local BP=Instance.new("Frame",Pop); BP.Size=UDim2.new(1,-16,0,14); BP.Position=UDim2.new(0,8,0,180); BP.BackgroundColor3=col; BP.BorderSizePixel=0; BP.ZIndex=161; Cor(BP,4)
-            -- Buttons
             local BR=Instance.new("Frame",Pop); BR.Size=UDim2.new(1,-16,0,28); BR.Position=UDim2.new(0,8,0,200); BR.BackgroundTransparency=1
             local OK=Instance.new("TextButton",BR); OK.Size=UDim2.new(0.5,-3,1,0); OK.BackgroundColor3=T.Accent; OK.BorderSizePixel=0; OK.Text="OK"; OK.TextSize=12; OK.Font=T.FontBold; OK.TextColor3=Color3.fromRGB(255,255,255); OK.AutoButtonColor=false; Cor(OK,6)
             local CL=Instance.new("TextButton",BR); CL.Size=UDim2.new(0.5,-3,1,0); CL.Position=UDim2.new(0.5,3,0,0); CL.BackgroundColor3=T.ElementHov; CL.BorderSizePixel=0; CL.Text="Batal"; CL.TextSize=12; CL.Font=T.FontBold; CL.TextColor3=T.TextSec; CL.AutoButtonColor=false; Cor(CL,6)
-            -- Eyedropper
             local EyeBtn = Instance.new("TextButton", Pop)
             EyeBtn.Size = UDim2.new(0, 28, 0, 28)
             EyeBtn.Position = UDim2.new(1, -36, 0, 180)
@@ -1597,13 +2057,9 @@ function KreinGui:CreateWindow(cfg)
                     local target = Mouse.Target
                     if target then
                         local color = Color3.new(1,1,1)
-                        if target:IsA("BasePart") then
-                            color = target.Color
-                        elseif target:IsA("GuiObject") then
-                            color = target.BackgroundColor3
-                        else
-                            color = Color3.fromRGB(255,255,255)
-                        end
+                        if target:IsA("BasePart") then color = target.Color
+                        elseif target:IsA("GuiObject") then color = target.BackgroundColor3
+                        else color = Color3.fromRGB(255,255,255) end
                         tH,tS,tV = toHSV(color)
                         updPrev()
                         eyeActive = false
@@ -1630,10 +2086,7 @@ function KreinGui:CreateWindow(cfg)
             UserInput.InputChanged:Connect(function(i) if hud and isMove(i) then tH=math.clamp((i.Position.X-HB.AbsolutePosition.X)/HB.AbsoluteSize.X,0,1); updPrev() end end)
             UserInput.InputEnded:Connect(function(i) if isDown(i) then hud=false end end)
             local TB3=Instance.new("TextButton",c); TB3.Size=UDim2.new(1,0,1,0); TB3.BackgroundTransparency=1; TB3.Text=""; TB3.AutoButtonColor=false
-            OnClick(TB3,function()
-                if open then tH,tS,tV=cH,cS,cV; updPrev(); closePop()
-                else tH,tS,tV=cH,cS,cV; updPrev(); updPos(); Pop.Visible=true; open=true; Tw(Pop,{Size=UDim2.new(0,PW,0,PH)},0.22) end
-            end)
+            OnClick(TB3,function() if open then tH,tS,tV=cH,cS,cV; updPrev(); closePop() else tH,tS,tV=cH,cS,cV; updPrev(); updPos(); Pop.Visible=true; open=true; Tw(Pop,{Size=UDim2.new(0,PW,0,PH)},0.22) end end)
             TB3.MouseEnter:Connect(function() Tw(c,{BackgroundColor3=T.ElementHov},0.15) end)
             TB3.MouseLeave:Connect(function() Tw(c,{BackgroundColor3=T.ElementBG},0.15) end)
             function api:Set(nc) col=nc; cH,cS,cV=toHSV(nc); Sw.BackgroundColor3=nc; pcall(cfg2.Callback or function()end,nc) end
