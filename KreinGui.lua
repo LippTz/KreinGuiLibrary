@@ -1,11 +1,8 @@
 --[[
     KreinGui v5.3 – GUI Library by @uniquadev
-    Visual overhaul: Soft, clean, modern, comfortable
-    - Smooth rounded corners (12px)
-    - Clean color palette (Dark blue + Teal accent)
-    - Subtle transparency
-    - Improved spacing and padding
-    - Responsive design
+    - Static wave animation on header (flowing gradient)
+    - Super-smooth tweens for all interactions
+    - Soft, clean, modern design
     All original features intact
 --]]
 
@@ -24,7 +21,7 @@ local Mouse = LocalPlayer:GetMouse()
 -- GLOBAL CLEANUP
 -- ============================================================
 local activeConnections = {}
-local snakeConnections = {}
+local waveConnections = {}
 local currentGui = nil
 
 local function addConnection(conn)
@@ -36,13 +33,11 @@ local function destroyAllConnections()
     for _, conn in ipairs(activeConnections) do
         pcall(function() conn:Disconnect() end)
     end
-    for _, data in ipairs(snakeConnections) do
-        pcall(function() data[1]:Disconnect() end)
-        pcall(function() if data[2] then data[2]:Destroy() end end)
-        pcall(function() if data[3] then data[3]:Destroy() end end)
+    for _, conn in ipairs(waveConnections) do
+        pcall(function() conn:Disconnect() end)
     end
     activeConnections = {}
-    snakeConnections = {}
+    waveConnections = {}
 end
 
 -- ============================================================
@@ -80,50 +75,34 @@ end
 -- THEME (Soft & Modern)
 -- ============================================================
 local Theme = {
-    -- Base
-    WindowBG = Color3.fromRGB(18, 22, 28),       -- Dark blue-gray
-    HeaderBG = Color3.fromRGB(22, 26, 34),       -- Slightly lighter
-    TabBG = Color3.fromRGB(20, 24, 31),          -- Tab panel background
-    ElementBG = Color3.fromRGB(26, 30, 38),      -- Card background
-    ElementHov = Color3.fromRGB(34, 39, 48),     -- Hover state
-    ElementStroke = Color3.fromRGB(48, 54, 66),  -- Subtle border
-    
-    -- Tabs
+    WindowBG = Color3.fromRGB(18, 22, 28),
+    HeaderBG = Color3.fromRGB(22, 26, 34),
+    TabBG = Color3.fromRGB(20, 24, 31),
+    ElementBG = Color3.fromRGB(26, 30, 38),
+    ElementHov = Color3.fromRGB(34, 39, 48),
+    ElementStroke = Color3.fromRGB(48, 54, 66),
     TabInactive = Color3.fromRGB(20, 24, 31),
     TabHover = Color3.fromRGB(42, 48, 60),
-    TabActive = Color3.fromRGB(20, 184, 166),    -- Soft teal accent
+    TabActive = Color3.fromRGB(20, 184, 166),
     TabInactiveText = Color3.fromRGB(140, 152, 170),
     TabActiveText = Color3.fromRGB(255, 255, 255),
-    
-    -- Accent
-    Accent = Color3.fromRGB(20, 184, 166),       -- Teal
-    AccentHover = Color3.fromRGB(45, 212, 191),  -- Lighter teal
-    AccentDark = Color3.fromRGB(15, 138, 125),   -- Darker teal
-    
-    -- Toggle
+    Accent = Color3.fromRGB(20, 184, 166),
+    AccentHover = Color3.fromRGB(45, 212, 191),
+    AccentDark = Color3.fromRGB(15, 138, 125),
     ToggleOff = Color3.fromRGB(45, 50, 60),
     ToggleOn = Color3.fromRGB(20, 184, 166),
-    
-    -- Text
     TextPrimary = Color3.fromRGB(240, 243, 250),
     TextSecondary = Color3.fromRGB(170, 180, 200),
     TextMuted = Color3.fromRGB(110, 120, 140),
     SectionText = Color3.fromRGB(20, 184, 166),
-    
-    -- Buttons
     CloseRed = Color3.fromRGB(255, 90, 90),
     MinGray = Color3.fromRGB(180, 190, 210),
-    
-    -- Misc
     Separator = Color3.fromRGB(45, 50, 60),
     StrokeColor = Color3.fromRGB(50, 56, 70),
-    
-    -- Font
     FontMain = Enum.Font.GothamMedium,
     FontBold = Enum.Font.GothamBold,
 }
 
--- Presets for quick theme switching
 local Presets = {
     Default = { Accent = Color3.fromRGB(20, 184, 166) },
     Neon = { Accent = Color3.fromRGB(0, 255, 180) },
@@ -135,12 +114,17 @@ local Presets = {
 }
 
 -- ============================================================
--- UI HELPERS
+-- UI HELPERS (with smooth tweens)
 -- ============================================================
 local function Tween(obj, props, duration, style, dir)
-    local t = TweenService:Create(obj, TweenInfo.new(duration or 0.2, style or Enum.EasingStyle.Quart, dir or Enum.EasingDirection.Out), props)
+    local t = TweenService:Create(obj, TweenInfo.new(duration or 0.2, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out), props)
     t:Play()
     return t
+end
+
+local function SmoothTween(obj, props, duration, style, dir)
+    -- alias for smoother feel
+    return Tween(obj, props, duration or 0.25, style or Enum.EasingStyle.Cubic, dir or Enum.EasingDirection.Out)
 end
 
 local function Corner(frame, radius)
@@ -212,9 +196,9 @@ local function showNextNotification(SG)
     nl.Font = Theme.FontMain
     nl.TextSize = 12
     nl.TextWrapped = true
-    Tween(N, { Position = UDim2.new(1, -290, 1, -64) }, 0.3)
+    SmoothTween(N, { Position = UDim2.new(1, -290, 1, -64) }, 0.3)
     task.delay(data.dur or 3, function()
-        Tween(N, { Position = UDim2.new(1, 10, 1, -64) }, 0.3)
+        SmoothTween(N, { Position = UDim2.new(1, 10, 1, -64) }, 0.3)
         task.delay(0.35, function()
             N:Destroy()
             notifActive = false
@@ -228,7 +212,7 @@ local function Notify(SG, msg, dur)
 end
 
 -- ============================================================
--- TOOLTIP SYSTEM (soft)
+-- TOOLTIP SYSTEM (smooth fade + scale)
 -- ============================================================
 local activeTooltip = nil
 local function ShowTooltip(text, parent)
@@ -236,9 +220,10 @@ local function ShowTooltip(text, parent)
     local tip = Instance.new("Frame", parent)
     tip.Size = UDim2.new(0, 0, 0, 28)
     tip.BackgroundColor3 = Theme.ElementBG
-    tip.BackgroundTransparency = 0.05
+    tip.BackgroundTransparency = 0.1
     tip.BorderSizePixel = 0
     tip.ZIndex = 200
+    tip.Visible = false
     Corner(tip, 8)
     Stroke(tip, Theme.Accent, 1)
     local lbl = Label(tip, text, UDim2.new(1, -12, 1, 0), Theme.TextPrimary)
@@ -250,55 +235,60 @@ local function ShowTooltip(text, parent)
     local y = ap.Y - 34
     tip.Position = UDim2.new(0, x, 0, y)
     tip.Size = UDim2.new(0, lbl.TextBounds.X + 20, 0, 28)
+    tip.Visible = true
+    tip.BackgroundTransparency = 1
+    tip.Size = UDim2.new(0, tip.Size.X.Offset, 0, 0)
+    SmoothTween(tip, { BackgroundTransparency = 0.1, Size = UDim2.new(0, tip.Size.X.Offset, 0, 28) }, 0.15)
     activeTooltip = tip
     tip.Destroying:Connect(function()
         if activeTooltip == tip then activeTooltip = nil end
     end)
 end
 local function HideTooltip()
-    if activeTooltip then activeTooltip:Destroy() end
+    if activeTooltip then
+        SmoothTween(activeTooltip, { BackgroundTransparency = 1, Size = UDim2.new(0, activeTooltip.Size.X.Offset, 0, 0) }, 0.1)
+        task.delay(0.12, function() if activeTooltip then activeTooltip:Destroy() end end)
+    end
 end
 
 -- ============================================================
--- SNAKE ANIMATION (subtle)
+-- WAVE ANIMATION (Header)
 -- ============================================================
-local function StartSnake(abar, accent)
-    local Glow = Instance.new("Frame", abar.Parent)
-    Glow.Name = "ABarGlow"
-    Glow.Size = UDim2.new(1, 0, 0, 8)
-    Glow.Position = UDim2.new(0, 0, 0, 50)
-    Glow.BackgroundColor3 = accent
-    Glow.BackgroundTransparency = 0.8
-    Glow.BorderSizePixel = 0
-    Glow.ZIndex = 2
-    Corner(Glow, 4)
+local function StartWaveAnimation(abar, accent)
+    -- Base line (solid)
+    local BaseLine = Instance.new("Frame", abar)
+    BaseLine.Size = UDim2.new(1, 0, 1, 0)
+    BaseLine.BackgroundColor3 = accent
+    BaseLine.BackgroundTransparency = 0.6
+    BaseLine.BorderSizePixel = 0
+    BaseLine.ZIndex = 2
 
-    local Snake = Instance.new("Frame", abar)
-    Snake.Size = UDim2.new(0.3, 0, 1, 0)
-    Snake.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    Snake.BackgroundTransparency = 1
-    Snake.BorderSizePixel = 0
-    Snake.ZIndex = 6
+    -- Wave effect (moving gradient)
+    local Wave = Instance.new("Frame", abar)
+    Wave.Size = UDim2.new(0.4, 0, 1, 0)
+    Wave.BackgroundTransparency = 1
+    Wave.BorderSizePixel = 0
+    Wave.ZIndex = 4
 
-    local sg = Instance.new("UIGradient", Snake)
-    sg.Transparency = NumberSequence.new({
+    local grad = Instance.new("UIGradient", Wave)
+    grad.Transparency = NumberSequence.new({
         NumberSequenceKeypoint.new(0, 1),
-        NumberSequenceKeypoint.new(0.4, 0.1),
+        NumberSequenceKeypoint.new(0.3, 0.1),
         NumberSequenceKeypoint.new(0.5, 0),
-        NumberSequenceKeypoint.new(0.6, 0.1),
+        NumberSequenceKeypoint.new(0.7, 0.1),
         NumberSequenceKeypoint.new(1, 1),
     })
+    grad.Color = ColorSequence.new(accent, Color3.fromRGB(255, 255, 255))
 
     local t = 0
     local conn
     conn = RunService.Heartbeat:Connect(function(dt)
         if not abar or not abar.Parent then conn:Disconnect(); return end
-        t = (t + dt * 0.5) % 1
-        Snake.Position = UDim2.new(t - 0.3, 0, 0, 0)
-        Glow.BackgroundTransparency = 0.7 + math.abs(math.sin(t * math.pi * 2)) * 0.2
+        t = (t + dt * 0.4) % 1
+        Wave.Position = UDim2.new(t - 0.4, 0, 0, 0)
     end)
     addConnection(conn)
-    table.insert(snakeConnections, { conn, Glow, Snake })
+    table.insert(waveConnections, conn)
 end
 
 -- ============================================================
@@ -350,19 +340,19 @@ local function ShowLoading(SG, accent, title, onDone)
         { pct = 0.35, txt = "Setting up UI..." },
         { pct = 0.55, txt = "Applying theme..." },
         { pct = 0.75, txt = "Building elements..." },
-        { pct = 0.9, txt = "Almost ready..." },
-        { pct = 1.0, txt = "Done!" },
+        { pct = 0.9,  txt = "Almost ready..." },
+        { pct = 1.0,  txt = "Done!" },
     }
 
     task.spawn(function()
         Box.BackgroundTransparency = 0.05
         for _, step in ipairs(steps) do
             SubLbl.Text = step.txt
-            Tween(BarFill, { Size = UDim2.new(step.pct, 0, 1, 0) }, 0.22)
+            SmoothTween(BarFill, { Size = UDim2.new(step.pct, 0, 1, 0) }, 0.22)
             task.wait(0.22)
         end
         task.wait(0.2)
-        Tween(Overlay, { BackgroundTransparency = 1 }, 0.4)
+        SmoothTween(Overlay, { BackgroundTransparency = 1 }, 0.4)
         task.wait(0.42)
         Overlay:Destroy()
         if onDone then onDone() end
@@ -451,8 +441,9 @@ function KreinGui:CreateWindow(cfg)
     ABar.Size = UDim2.new(1, 0, 0, 3)
     ABar.Position = UDim2.new(0, 0, 0, 56)
     ABar.BackgroundColor3 = Theme.Accent
+    ABar.BackgroundTransparency = 0
     ABar.BorderSizePixel = 0
-    StartSnake(ABar, Theme.Accent)
+    StartWaveAnimation(ABar, Theme.Accent)
 
     local LogoBg = Instance.new("Frame", Header)
     LogoBg.Size = UDim2.new(0, 36, 0, 36)
@@ -636,7 +627,7 @@ function KreinGui:CreateWindow(cfg)
             Win.Size = UDim2.new(0, 0, 0, curH)
             Win.Position = UDim2.new(0, 32, 0, 0)
             Wrapper.Position = lastWrapperPos
-            Tween(Win, { Size = lastWinSize }, 0.4)
+            SmoothTween(Win, { Size = lastWinSize }, 0.4)
             Wrapper.Size = lastWrapperSize
             syncToggleBtnY(lastWinSize.Y.Offset)
         else
@@ -644,12 +635,12 @@ function KreinGui:CreateWindow(cfg)
             lastWinSize = Win.Size
             lastWrapperPos = Wrapper.Position
             local curY = Wrapper.Position.Y
-            Tween(Win, { Size = UDim2.new(0, 0, 0, curH) }, 0.35)
+            SmoothTween(Win, { Size = UDim2.new(0, 0, 0, curH) }, 0.35)
             task.delay(0.35, function()
                 Win.Visible = false
                 Win.Size = lastWinSize
             end)
-            Tween(Wrapper, { Position = UDim2.new(0, -4, curY.Scale, curY.Offset) }, 0.35)
+            SmoothTween(Wrapper, { Position = UDim2.new(0, -4, curY.Scale, curY.Offset) }, 0.35)
         end
         updateToggleIcon()
     end
@@ -661,8 +652,8 @@ function KreinGui:CreateWindow(cfg)
         if isMinimized then
             MinBtn.Text = "+"
             resizeEnabled = false
-            Tween(Win, { Size = UDim2.new(0, 560, 0, 56) }, 0.3)
-            Tween(Wrapper, { Size = UDim2.new(0, 592, 0, 56) }, 0.3)
+            SmoothTween(Win, { Size = UDim2.new(0, 560, 0, 56) }, 0.3)
+            SmoothTween(Wrapper, { Size = UDim2.new(0, 592, 0, 56) }, 0.3)
             task.delay(0.2, function()
                 ABar.Visible = false
                 syncToggleBtnY(56)
@@ -673,8 +664,8 @@ function KreinGui:CreateWindow(cfg)
             MinBtn.Text = "−"
             resizeEnabled = true
             ABar.Visible = true
-            Tween(Win, { Size = UDim2.new(0, 560, 0, 380) }, 0.4, Enum.EasingStyle.Back)
-            Tween(Wrapper, { Size = UDim2.new(0, 592, 0, 380) }, 0.4, Enum.EasingStyle.Back)
+            SmoothTween(Win, { Size = UDim2.new(0, 560, 0, 380) }, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+            SmoothTween(Wrapper, { Size = UDim2.new(0, 592, 0, 380) }, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
             task.delay(0.35, function()
                 syncToggleBtnY(380)
                 lastWrapperSize = Wrapper.Size
@@ -724,8 +715,8 @@ function KreinGui:CreateWindow(cfg)
             local delta = i.Position - resizeStart
             local newW = math.max(450, resizeStartSize.X.Offset + delta.X)
             local newH = math.max(250, resizeStartSize.Y.Offset + delta.Y)
-            Wrapper.Size = UDim2.new(0, newW, 0, newH)
-            Win.Size = UDim2.new(0, newW - 32, 0, newH)
+            SmoothTween(Wrapper, { Size = UDim2.new(0, newW, 0, newH) }, 0.15)
+            SmoothTween(Win, { Size = UDim2.new(0, newW - 32, 0, newH) }, 0.15)
             syncToggleBtnY(newH)
             lastWrapperSize = Wrapper.Size
             lastWinSize = Win.Size
@@ -744,16 +735,16 @@ function KreinGui:CreateWindow(cfg)
         activeTab = idx
         for i, btn in ipairs(tabButtons) do
             local active = (i == idx)
-            btn.BackgroundColor3 = active and Theme.TabActive or Theme.TabInactive
+            SmoothTween(btn, { BackgroundColor3 = active and Theme.TabActive or Theme.TabInactive }, 0.15)
             local lbl = btn:FindFirstChild("Label")
-            if lbl then lbl.TextColor3 = active and Theme.TabActiveText or Theme.TabInactiveText end
+            if lbl then SmoothTween(lbl, { TextColor3 = active and Theme.TabActiveText or Theme.TabInactiveText }, 0.15) end
             local bar = btn:FindFirstChild("Bar")
             if bar then bar.Visible = active end
         end
         for i, f in ipairs(tabFrames) do
             if i == idx then
                 f.Size = UDim2.new(0, 0, 0, 0)
-                Tween(f, { Size = UDim2.new(1, 0, 1, 0) }, 0.25)
+                SmoothTween(f, { Size = UDim2.new(1, 0, 1, 0) }, 0.25)
             else
                 f.Size = UDim2.new(0, 0, 0, 0)
             end
@@ -909,10 +900,10 @@ function KreinGui:CreateWindow(cfg)
 
         OnClick(btn, function() setActiveTab(idx) end)
         btn.MouseEnter:Connect(function()
-            if activeTab ~= idx then btn.BackgroundColor3 = Theme.TabHover end
+            if activeTab ~= idx then SmoothTween(btn, { BackgroundColor3 = Theme.TabHover }, 0.08)
         end)
         btn.MouseLeave:Connect(function()
-            if activeTab ~= idx then btn.BackgroundColor3 = Theme.TabInactive end
+            if activeTab ~= idx then SmoothTween(btn, { BackgroundColor3 = Theme.TabInactive }, 0.08)
         end)
         tabButtons[idx] = btn
 
@@ -964,7 +955,9 @@ function KreinGui:CreateWindow(cfg)
             elem.MouseLeave:Connect(function() HideTooltip() end)
         end
 
-        -- Element creation methods (same as before, but with cleaner styling)
+        -- ====================================================================
+        -- ELEMENT CREATION METHODS (with smooth tweens for hover)
+        -- ====================================================================
         function Tab:CreateLabel(text, hint)
             local c = Card(38)
             Padding(c, 0, 0, 14, 14)
@@ -1019,12 +1012,18 @@ function KreinGui:CreateWindow(cfg)
             runBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
             Corner(runBtn, 8)
             OnClick(runBtn, function()
-                Tween(runBtn, { BackgroundColor3 = Theme.AccentDark }, 0.1)
-                task.delay(0.15, function() Tween(runBtn, { BackgroundColor3 = Theme.Accent }, 0.15) end)
+                SmoothTween(runBtn, { BackgroundColor3 = Theme.AccentDark }, 0.1)
+                task.delay(0.15, function() SmoothTween(runBtn, { BackgroundColor3 = Theme.Accent }, 0.15) end)
                 pcall(cfg.Callback or function() end)
             end)
-            runBtn.MouseEnter:Connect(function() runBtn.BackgroundColor3 = Theme.AccentHover end)
-            runBtn.MouseLeave:Connect(function() runBtn.BackgroundColor3 = Theme.Accent end)
+            runBtn.MouseEnter:Connect(function() SmoothTween(runBtn, { BackgroundColor3 = Theme.AccentHover }, 0.08) end)
+            runBtn.MouseLeave:Connect(function() SmoothTween(runBtn, { BackgroundColor3 = Theme.Accent }, 0.08) end)
+            local hov = Instance.new("TextButton", c)
+            hov.Size = UDim2.new(1, 0, 1, 0)
+            hov.BackgroundTransparency = 1
+            hov.Text = ""
+            hov.MouseEnter:Connect(function() SmoothTween(c, { BackgroundColor3 = Theme.ElementHov }, 0.08) end)
+            hov.MouseLeave:Connect(function() SmoothTween(c, { BackgroundColor3 = Theme.ElementBG }, 0.08) end)
             if cfg.Hint then addHint(c, cfg.Hint) end
         end
 
@@ -1052,15 +1051,15 @@ function KreinGui:CreateWindow(cfg)
             hit.Text = ""
             local api = {}
             local function update()
-                Tween(track, { BackgroundColor3 = state and Theme.ToggleOn or Theme.ToggleOff }, 0.18)
-                Tween(knob, { Position = state and UDim2.new(1, -22, 0.5, -10) or UDim2.new(0, 2, 0.5, -10) }, 0.18)
+                SmoothTween(track, { BackgroundColor3 = state and Theme.ToggleOn or Theme.ToggleOff }, 0.18)
+                SmoothTween(knob, { Position = state and UDim2.new(1, -22, 0.5, -10) or UDim2.new(0, 2, 0.5, -10) }, 0.18)
                 pcall(cfg.Callback or function() end, state)
             end
             function api:Set(v) state = v; update() end
             function api:Get() return state end
             OnClick(hit, function() state = not state; update() end)
-            hit.MouseEnter:Connect(function() Tween(c, { BackgroundColor3 = Theme.ElementHov }, 0.15) end)
-            hit.MouseLeave:Connect(function() Tween(c, { BackgroundColor3 = Theme.ElementBG }, 0.15) end)
+            hit.MouseEnter:Connect(function() SmoothTween(c, { BackgroundColor3 = Theme.ElementHov }, 0.08) end)
+            hit.MouseLeave:Connect(function() SmoothTween(c, { BackgroundColor3 = Theme.ElementBG }, 0.08) end)
             registerFlag(cfg.Flag, api, c)
             if cfg.Hint then addHint(c, cfg.Hint) end
             return api
@@ -1112,11 +1111,11 @@ function KreinGui:CreateWindow(cfg)
                 val = math.floor(min + r * (max - min) + 0.5)
                 local p = (val - min) / (max - min)
                 fill.Size = UDim2.new(p, 0, 1, 0)
-                knob.Position = UDim2.new(p, -10, 0.5, -10)
+                SmoothTween(knob, { Position = UDim2.new(p, -10, 0.5, -10) }, 0.1)
                 valLabel.Text = tostring(val)
                 pcall(cfg.Callback or function() end, val)
             end
-            function api:Set(v) val = math.clamp(v, min, max); local p = (val - min) / (max - min); fill.Size = UDim2.new(p, 0, 1, 0); knob.Position = UDim2.new(p, -10, 0.5, -10); valLabel.Text = tostring(val); pcall(cfg.Callback or function() end, val) end
+            function api:Set(v) val = math.clamp(v, min, max); local p = (val - min) / (max - min); fill.Size = UDim2.new(p, 0, 1, 0); SmoothTween(knob, { Position = UDim2.new(p, -10, 0.5, -10) }, 0.15); valLabel.Text = tostring(val); pcall(cfg.Callback or function() end, val) end
             function api:Get() return val end
             hit.InputBegan:Connect(function(i) if isDown(i) then dragging = true; updateValue(i.Position.X) end end)
             UserInput.InputChanged:Connect(function(i) if dragging and isMove(i) then updateValue(i.Position.X) end end)
@@ -1127,7 +1126,7 @@ function KreinGui:CreateWindow(cfg)
         end
 
         function Tab:CreateSliderNumber(cfg)
-            -- Same as slider but with number input - simplified for brevity, works same
+            -- same as slider but with number input
             cfg = cfg or {}
             local min = cfg.Min or 0
             local max = cfg.Max or 100
@@ -1181,7 +1180,7 @@ function KreinGui:CreateWindow(cfg)
                 val = math.clamp(newVal, min, max)
                 local p = (val - min) / (max - min)
                 fill.Size = UDim2.new(p, 0, 1, 0)
-                knob.Position = UDim2.new(p, -10, 0.5, -10)
+                SmoothTween(knob, { Position = UDim2.new(p, -10, 0.5, -10) }, 0.1)
                 numBox.Text = tostring(val)
                 pcall(cfg.Callback or function() end, val)
             end
@@ -1237,9 +1236,10 @@ function KreinGui:CreateWindow(cfg)
             local api = {}
             function api:Set(v) box.Text = tostring(v) end
             function api:Get() return box.Text end
-            box.Focused:Connect(function() stroke.Color = Theme.Accent end)
+            box.Focused:Connect(function() stroke.Color = Theme.Accent; SmoothTween(inputFrame, { BackgroundColor3 = Theme.WindowBG }, 0.1) end)
             box.FocusLost:Connect(function(enter)
                 stroke.Color = Theme.ElementStroke
+                SmoothTween(inputFrame, { BackgroundColor3 = Theme.WindowBG }, 0.1)
                 if enter then pcall(cfg.Callback or function() end, box.Text) end
             end)
             registerFlag(cfg.Flag, api, c)
@@ -1315,14 +1315,14 @@ function KreinGui:CreateWindow(cfg)
                     pcall(cfg.Callback or function() end, sel)
                     closePop()
                 end)
-                ob.MouseEnter:Connect(function() ob.BackgroundColor3 = Theme.TabHover end)
-                ob.MouseLeave:Connect(function() ob.BackgroundColor3 = Theme.ElementHov end)
+                ob.MouseEnter:Connect(function() SmoothTween(ob, { BackgroundColor3 = Theme.TabHover }, 0.08) end)
+                ob.MouseLeave:Connect(function() SmoothTween(ob, { BackgroundColor3 = Theme.ElementHov }, 0.08) end)
             end
 
             local function closePop()
                 if not open then return end
                 open = false
-                Tween(popup, { Size = UDim2.new(0, 100, 0, 0) }, 0.18)
+                SmoothTween(popup, { Size = UDim2.new(0, 100, 0, 0) }, 0.18)
                 arrow.Text = "▼"
                 task.delay(0.2, function() popup.Visible = false end)
             end
@@ -1340,7 +1340,7 @@ function KreinGui:CreateWindow(cfg)
                 popup.Size = UDim2.new(0, w, 0, 0)
                 popup.Visible = true
                 open = true
-                Tween(popup, { Size = UDim2.new(0, w, 0, maxH) }, 0.22)
+                SmoothTween(popup, { Size = UDim2.new(0, w, 0, maxH) }, 0.22)
                 arrow.Text = "▲"
             end
 
@@ -1349,8 +1349,8 @@ function KreinGui:CreateWindow(cfg)
             hit.BackgroundTransparency = 1
             hit.Text = ""
             OnClick(hit, function() if open then closePop() else openPop() end end)
-            hit.MouseEnter:Connect(function() Tween(c, { BackgroundColor3 = Theme.ElementHov }, 0.15) end)
-            hit.MouseLeave:Connect(function() Tween(c, { BackgroundColor3 = Theme.ElementBG }, 0.15) end)
+            hit.MouseEnter:Connect(function() SmoothTween(c, { BackgroundColor3 = Theme.ElementHov }, 0.08) end)
+            hit.MouseLeave:Connect(function() SmoothTween(c, { BackgroundColor3 = Theme.ElementBG }, 0.08) end)
 
             UserInput.InputBegan:Connect(function(i)
                 if not open or not isDown(i) then return end
@@ -1376,7 +1376,6 @@ function KreinGui:CreateWindow(cfg)
         end
 
         function Tab:CreateMultiDropdown(cfg)
-            -- Simplified version, same as before but with cleaner styling
             cfg = cfg or {}
             local opts = cfg.Options or {}
             local selected = {}
@@ -1455,18 +1454,18 @@ function KreinGui:CreateWindow(cfg)
                 lbl.TextSize = 12
                 OnClick(chk, function()
                     selected[opt] = not selected[opt]
-                    chk.BackgroundColor3 = selected[opt] and Theme.Accent or Theme.ToggleOff
+                    SmoothTween(chk, { BackgroundColor3 = selected[opt] and Theme.Accent or Theme.ToggleOff }, 0.1)
                     chk.Text = selected[opt] and "✓" or ""
                     updateText()
                 end)
-                row.MouseEnter:Connect(function() row.BackgroundColor3 = Theme.TabHover end)
-                row.MouseLeave:Connect(function() row.BackgroundColor3 = Theme.ElementHov end)
+                row.MouseEnter:Connect(function() SmoothTween(row, { BackgroundColor3 = Theme.TabHover }, 0.08) end)
+                row.MouseLeave:Connect(function() SmoothTween(row, { BackgroundColor3 = Theme.ElementHov }, 0.08) end)
             end
 
             local function closePop()
                 if not open then return end
                 open = false
-                Tween(popup, { Size = UDim2.new(0, 150, 0, 0) }, 0.18)
+                SmoothTween(popup, { Size = UDim2.new(0, 150, 0, 0) }, 0.18)
                 arrow.Text = "▼"
                 task.delay(0.2, function() popup.Visible = false end)
             end
@@ -1484,7 +1483,7 @@ function KreinGui:CreateWindow(cfg)
                 popup.Size = UDim2.new(0, w, 0, 0)
                 popup.Visible = true
                 open = true
-                Tween(popup, { Size = UDim2.new(0, w, 0, maxH) }, 0.22)
+                SmoothTween(popup, { Size = UDim2.new(0, w, 0, maxH) }, 0.22)
                 arrow.Text = "▲"
             end
 
@@ -1493,8 +1492,8 @@ function KreinGui:CreateWindow(cfg)
             hit.BackgroundTransparency = 1
             hit.Text = ""
             OnClick(hit, function() if open then closePop() else openPop() end end)
-            hit.MouseEnter:Connect(function() Tween(c, { BackgroundColor3 = Theme.ElementHov }, 0.15) end)
-            hit.MouseLeave:Connect(function() Tween(c, { BackgroundColor3 = Theme.ElementBG }, 0.15) end)
+            hit.MouseEnter:Connect(function() SmoothTween(c, { BackgroundColor3 = Theme.ElementHov }, 0.08) end)
+            hit.MouseLeave:Connect(function() SmoothTween(c, { BackgroundColor3 = Theme.ElementBG }, 0.08) end)
 
             UserInput.InputBegan:Connect(function(i)
                 if not open or not isDown(i) then return end
@@ -1582,19 +1581,19 @@ function KreinGui:CreateWindow(cfg)
             OnClick(minus, function()
                 val = math.clamp(val - step, min, max)
                 update()
-                Tween(minus, { BackgroundColor3 = Theme.AccentDark }, 0.1)
-                task.delay(0.15, function() Tween(minus, { BackgroundColor3 = Theme.ElementHov }, 0.15) end)
+                SmoothTween(minus, { BackgroundColor3 = Theme.AccentDark }, 0.1)
+                task.delay(0.15, function() SmoothTween(minus, { BackgroundColor3 = Theme.ElementHov }, 0.15) end)
             end)
             OnClick(plus, function()
                 val = math.clamp(val + step, min, max)
                 update()
-                Tween(plus, { BackgroundColor3 = Theme.AccentDark }, 0.1)
-                task.delay(0.15, function() Tween(plus, { BackgroundColor3 = Theme.ElementHov }, 0.15) end)
+                SmoothTween(plus, { BackgroundColor3 = Theme.AccentDark }, 0.1)
+                task.delay(0.15, function() SmoothTween(plus, { BackgroundColor3 = Theme.ElementHov }, 0.15) end)
             end)
-            minus.MouseEnter:Connect(function() minus.BackgroundColor3 = Theme.TabHover end)
-            minus.MouseLeave:Connect(function() minus.BackgroundColor3 = Theme.ElementHov end)
-            plus.MouseEnter:Connect(function() plus.BackgroundColor3 = Theme.TabHover end)
-            plus.MouseLeave:Connect(function() plus.BackgroundColor3 = Theme.ElementHov end)
+            minus.MouseEnter:Connect(function() SmoothTween(minus, { BackgroundColor3 = Theme.TabHover }, 0.08) end)
+            minus.MouseLeave:Connect(function() SmoothTween(minus, { BackgroundColor3 = Theme.ElementHov }, 0.08) end)
+            plus.MouseEnter:Connect(function() SmoothTween(plus, { BackgroundColor3 = Theme.TabHover }, 0.08) end)
+            plus.MouseLeave:Connect(function() SmoothTween(plus, { BackgroundColor3 = Theme.ElementHov }, 0.08) end)
             registerFlag(cfg.Flag, api, c)
             if cfg.Hint then addHint(c, cfg.Hint) end
             return api
@@ -1633,10 +1632,10 @@ function KreinGui:CreateWindow(cfg)
             function api:Set(v)
                 val = math.clamp(v, 0, 100)
                 local p = val / 100
-                Tween(fill, { Size = UDim2.new(p, 0, 1, 0) }, 0.3)
+                SmoothTween(fill, { Size = UDim2.new(p, 0, 1, 0) }, 0.3)
                 pctLabel.Text = val .. "%"
                 local color = val >= 100 and Color3.fromRGB(34, 197, 94) or Theme.Accent
-                Tween(fill, { BackgroundColor3 = color }, 0.3)
+                SmoothTween(fill, { BackgroundColor3 = color }, 0.3)
                 pcall(cfg.Callback or function() end, val)
             end
             function api:Get() return val end
@@ -1819,14 +1818,14 @@ function KreinGui:CreateWindow(cfg)
                     if i.UserInputType == Enum.UserInputType.Keyboard then
                         if i.KeyCode == Enum.KeyCode.Escape then
                             listening = false
-                            btn.BackgroundColor3 = Theme.WindowBG
+                            SmoothTween(btn, { BackgroundColor3 = Theme.WindowBG }, 0.1)
                             btn.Text = "[" .. keyName(key) .. "]"
                             if conn then conn:Disconnect() end
                             return
                         end
                         key = i.KeyCode
                         listening = false
-                        btn.BackgroundColor3 = Theme.WindowBG
+                        SmoothTween(btn, { BackgroundColor3 = Theme.WindowBG }, 0.1)
                         btn.Text = "[" .. keyName(key) .. "]"
                         if conn then conn:Disconnect() end
                         pcall(cfg.Callback or function() end, key)
@@ -1834,8 +1833,8 @@ function KreinGui:CreateWindow(cfg)
                 end)
                 addConnection(conn)
             end)
-            btn.MouseEnter:Connect(function() Tween(c, { BackgroundColor3 = Theme.ElementHov }, 0.15) end)
-            btn.MouseLeave:Connect(function() Tween(c, { BackgroundColor3 = Theme.ElementBG }, 0.15) end)
+            btn.MouseEnter:Connect(function() SmoothTween(c, { BackgroundColor3 = Theme.ElementHov }, 0.08) end)
+            btn.MouseLeave:Connect(function() SmoothTween(c, { BackgroundColor3 = Theme.ElementBG }, 0.08) end)
             registerFlag(cfg.Flag, api, c)
             if cfg.Hint then addHint(c, cfg.Hint) end
             return api
@@ -1848,7 +1847,7 @@ function KreinGui:CreateWindow(cfg)
         Win.Visible = true
         Win.BackgroundTransparency = 0.08
         Wrapper.Position = UDim2.new(0.5, -280 - 32, 0.5, -190)
-        Tween(Wrapper, { Position = UDim2.new(0.5, -280 - 32, 0.5, -190) }, 0.55, Enum.EasingStyle.Back)
+        SmoothTween(Wrapper, { Position = UDim2.new(0.5, -280 - 32, 0.5, -190) }, 0.55, Enum.EasingStyle.Back)
         syncToggleBtnY(380)
         lastWrapperPos = Wrapper.Position
     end)
