@@ -1,9 +1,7 @@
 --[[
-    KreinGui v5.3 – GUI Library by @uniquadev
-    - Static wave animation on header (flowing gradient)
-    - Super-smooth tweens for all interactions
-    - Soft, clean, modern design
-    All original features intact
+    KreinGui v5.3 – GUI Library by @uniquadev (Stable)
+    - All file/clipboard functions protected with pcall
+    - No errors on executors without writefile/readfile support
 --]]
 
 -- ============================================================
@@ -114,7 +112,7 @@ local Presets = {
 }
 
 -- ============================================================
--- UI HELPERS (with smooth tweens)
+-- UI HELPERS
 -- ============================================================
 local function Tween(obj, props, duration, style, dir)
     local t = TweenService:Create(obj, TweenInfo.new(duration or 0.2, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out), props)
@@ -123,7 +121,6 @@ local function Tween(obj, props, duration, style, dir)
 end
 
 local function SmoothTween(obj, props, duration, style, dir)
-    -- alias for smoother feel
     return Tween(obj, props, duration or 0.25, style or Enum.EasingStyle.Cubic, dir or Enum.EasingDirection.Out)
 end
 
@@ -212,7 +209,7 @@ local function Notify(SG, msg, dur)
 end
 
 -- ============================================================
--- TOOLTIP SYSTEM (smooth fade + scale)
+-- TOOLTIP SYSTEM
 -- ============================================================
 local activeTooltip = nil
 local function ShowTooltip(text, parent)
@@ -255,7 +252,6 @@ end
 -- WAVE ANIMATION (Header)
 -- ============================================================
 local function StartWaveAnimation(abar, accent)
-    -- Base line (solid)
     local BaseLine = Instance.new("Frame", abar)
     BaseLine.Size = UDim2.new(1, 0, 1, 0)
     BaseLine.BackgroundColor3 = accent
@@ -263,7 +259,6 @@ local function StartWaveAnimation(abar, accent)
     BaseLine.BorderSizePixel = 0
     BaseLine.ZIndex = 2
 
-    -- Wave effect (moving gradient)
     local Wave = Instance.new("Frame", abar)
     Wave.Size = UDim2.new(0.4, 0, 1, 0)
     Wave.BackgroundTransparency = 1
@@ -782,23 +777,35 @@ function KreinGui:CreateWindow(cfg)
                 data[k] = v
             end
         end
-        local ok, err = pcall(function() writefile(cfgName .. ".json", HttpService:JSONEncode(data)) end)
-        self:Notify(ok and "Config saved" or "Save failed: " .. tostring(err), 2)
+        local success, err = pcall(function()
+            writefile(cfgName .. ".json", HttpService:JSONEncode(data))
+        end)
+        if success then
+            self:Notify("Config saved", 2)
+        else
+            self:Notify("Save failed: " .. tostring(err), 2)
+        end
     end
 
     function Window:LoadConfig()
-        local ok, raw = pcall(readfile, cfgName .. ".json")
-        if not ok or not raw then self:Notify("No config found", 2) return end
-        local ok2, data = pcall(HttpService.JSONDecode, HttpService, raw)
-        if not ok2 then self:Notify("Corrupted config", 2) return end
+        local success, raw = pcall(readfile, cfgName .. ".json")
+        if not success or not raw then
+            self:Notify("No config found", 2)
+            return
+        end
+        local success2, data = pcall(HttpService.JSONDecode, HttpService, raw)
+        if not success2 or not data then
+            self:Notify("Corrupted config", 2)
+            return
+        end
         for k, val in pairs(data) do
             if flags[k] then
                 if type(val) == "table" and val.__t == "Color3" then
                     flags[k]:Set(Color3.new(val.r, val.g, val.b))
                 elseif type(val) == "table" and val.__t == "Enum" then
                     local parts = string.split(val.v, ".")
-                    local success, en = pcall(function() return Enum[parts[2]][parts[3]] end)
-                    if success then flags[k]:Set(en) end
+                    local ok, en = pcall(function() return Enum[parts[2]][parts[3]] end)
+                    if ok then flags[k]:Set(en) end
                 else
                     flags[k]:Set(val)
                 end
@@ -821,26 +828,40 @@ function KreinGui:CreateWindow(cfg)
         end
         local json = HttpService:JSONEncode(data)
         if setclipboard then
-            setclipboard(json)
-            self:Notify("Copied to clipboard", 2)
+            local success, err = pcall(setclipboard, json)
+            if success then
+                self:Notify("Copied to clipboard", 2)
+            else
+                self:Notify("Clipboard error: " .. tostring(err), 2)
+            end
         else
             self:Notify("Clipboard not supported", 2)
         end
     end
 
     function Window:ImportFromClipboard()
-        if not getclipboard then self:Notify("Clipboard not supported", 2) return end
-        local raw = getclipboard()
+        if not getclipboard then
+            self:Notify("Clipboard not supported", 2)
+            return
+        end
+        local success, raw = pcall(getclipboard)
+        if not success or not raw then
+            self:Notify("Clipboard error", 2)
+            return
+        end
         local ok, data = pcall(HttpService.JSONDecode, HttpService, raw)
-        if not ok then self:Notify("Invalid clipboard data", 2) return end
+        if not ok then
+            self:Notify("Invalid clipboard data", 2)
+            return
+        end
         for k, val in pairs(data) do
             if flags[k] then
                 if type(val) == "table" and val.__t == "Color3" then
                     flags[k]:Set(Color3.new(val.r, val.g, val.b))
                 elseif type(val) == "table" and val.__t == "Enum" then
                     local parts = string.split(val.v, ".")
-                    local success, en = pcall(function() return Enum[parts[2]][parts[3]] end)
-                    if success then flags[k]:Set(en) end
+                    local ok2, en = pcall(function() return Enum[parts[2]][parts[3]] end)
+                    if ok2 then flags[k]:Set(en) end
                 else
                     flags[k]:Set(val)
                 end
@@ -956,7 +977,7 @@ function KreinGui:CreateWindow(cfg)
         end
 
         -- ====================================================================
-        -- ELEMENT CREATION METHODS (with smooth tweens for hover)
+        -- ELEMENT CREATION METHODS
         -- ====================================================================
         function Tab:CreateLabel(text, hint)
             local c = Card(38)
@@ -1126,7 +1147,6 @@ function KreinGui:CreateWindow(cfg)
         end
 
         function Tab:CreateSliderNumber(cfg)
-            -- same as slider but with number input
             cfg = cfg or {}
             local min = cfg.Min or 0
             local max = cfg.Max or 100
